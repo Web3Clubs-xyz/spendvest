@@ -5,7 +5,12 @@ import random
 import json
 
 # Create a Redis client
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=10)
+# redis_client = redis.StrictRedis(host='localhost', port=6379, db=10)
+
+redis_client = redis.Redis(
+  host='redis-18019.c12.us-east-1-4.ec2.redns.redis-cloud.com',
+  port=18019,
+  password='5YQQuHQEPoC64Ccs2iEXANjyxlSO43LY')
 
 class MpesaCustomer:
     @staticmethod
