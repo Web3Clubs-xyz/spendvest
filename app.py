@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from flask_sqlalchemy import SQLAlchemy
+
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse, Message
 from twilio.rest import Client
@@ -8,7 +8,7 @@ import redis
 import random
 import string 
 import time
-from sqlalchemy.sql import func
+
 import re
 import json 
 
@@ -18,14 +18,13 @@ from payments2 import send_user_stk, send_payment
 from models  import Menu, MpesaCustomer
 import uuid
 
-current_timestamp = func.current_timestamp()
+
 
 # Account SID and Auth Token from www.twilio.com/console
 client = Client('TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN')
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
-db = SQLAlchemy()
+
 
 def generate_uid(length=10):
     chars = string.ascii_letters  + string.digits
@@ -424,44 +423,6 @@ def get_session(session_id):
         return jsonify({'id': session.id, 'name': session.name})
     else:
         return jsonify({"error": "Session not found"}), 404
-
-# Create session
-@app.route('/sessions', methods=['POST'])
-def create_session():
-    name = request.json.get('name')
-    if not name:
-        return jsonify({"error": "Name cannot be blank"}), 400
-
-    session_test = Session(name=name)
-    db.session.add(session_test)
-    db.session.commit()
-    return jsonify({"message": "Session created successfully", "id": session_test.id}), 201
-
-# Update session
-@app.route('/sessions/<int:session_id>', methods=['PATCH'])
-def update_session(session_id):
-    session = Session.query.get(session_id)
-    if not session:
-        return jsonify({"error": "Session not found"}), 404
-
-    name = request.json.get('name')
-    if not name:
-        return jsonify({"error": "Name cannot be blank"}), 400
-
-    session.name = name
-    db.session.commit()
-    return jsonify({"message": "Session updated successfully", "id": session.id}), 200
-
-# Delete session
-@app.route('/sessions/<int:session_id>', methods=['DELETE'])
-def delete_session(session_id):
-    session = Session.query.get(session_id)
-    if not session:
-        return jsonify({"error": "Session not found"}), 404
-
-    db.session.delete(session)
-    db.session.commit()
-    return jsonify({"message": "Session deleted successfully", "id": session.id}), 200
 
 
 # landing page
