@@ -5,7 +5,7 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Copy the contents of the spendvest_backend_py directory into the container at /app
-COPY spendvest_backend_py /app
+COPY spendvest_bot /app
 
 # Install any needed dependencies specified in requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
