@@ -14,4 +14,6 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 EXPOSE 80
 
 # Define the command to run the Flask application
-CMD ["python", "/app/app.py"]
+# CMD ["python", "/app/app.py"]
+
+CMD ["gunicorn", "app:app"]
