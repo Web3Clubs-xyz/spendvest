@@ -2,7 +2,11 @@ import redis
 import time
 import json
 
-redis_client = redis.Redis(host="localhost", port=6379, db=10)
+redis_client = redis.Redis(
+  host='redis-18019.c12.us-east-1-4.ec2.redns.redis-cloud.com',
+  port=18019,
+  password='5YQQuHQEPoC64Ccs2iEXANjyxlSO43LY')
+
 print(f"testing redis connection, {redis_client.ping()}")
 
 class Session():
