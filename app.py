@@ -407,24 +407,6 @@ def process_callback_timeout():
 
     return 'ok'
 
-
-# Get all sessions
-@app.route('/sessions', methods=['GET'])
-def get_sessions():
-    sessions = Session.query.all()
-    session_list = [{'id': session.id, 'name': session.name} for session in sessions]
-    return jsonify({'sessions': session_list})
-
-# Get single session
-@app.route('/sessions/<int:session_id>', methods=['GET'])
-def get_session(session_id):
-    session = Session.query.get(session_id)
-    if session:
-        return jsonify({'id': session.id, 'name': session.name})
-    else:
-        return jsonify({"error": "Session not found"}), 404
-
-
 # landing page
 @app.route('/')
 def index():
@@ -432,4 +414,4 @@ def index():
 
 if __name__ == "__main__":
     with app.app_context():
-        app.run(debug=True, port=5080)
+        app.run(debug=True, port=80)
