@@ -1,14 +1,29 @@
 {
     "builds": [
-        {
-            "src":"app.py",
-            "use":"@vercel/python"
-        }
+      {
+        "src": "spendvest_bot/app.py",
+        "use": "@vercel/python"
+      }
     ],
+    "functions": {
+      "spendvest_bot/*.py": {
+        "runtime": "python3.9"
+      }
+    },
     "routes": [
-        {
-            "src":"/(.*)", 
-            "dest":"app.py"
-        }
+      {
+        "src": "/(.*)",
+        "dest": "/spendvest_bot/app.py"
+      }
+    ],
+    "hooks": {
+      "build": "rm -rf spendvest_bot/__pycache__ spendvest_bot/venv" 
+    },
+    "ignore": [
+      "spendvest_bot/__pycache__/",
+      "spendvest_bot/venv/",
+      "spendvest_bot/test.py",
+      "spendvest_bot/README.md",
+      "spendvest_bot/Dockerfile"
     ]
-} 
+  }
