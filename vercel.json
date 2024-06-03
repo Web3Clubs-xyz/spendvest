@@ -1,14 +1,14 @@
 {
     "builds": [
         {
-            "src":"spendvest_backend_py/app.py",
+            "src":"app.py",
             "use":"@vercel/python"
         }
     ],
     "routes": [
         {
             "src":"/(.*)", 
-            "dest":"spendvest_backend_py/app.py"
+            "dest":"app.py"
         }
     ]
 } 
