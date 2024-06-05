@@ -101,7 +101,7 @@ def web_hook():
                     
                     elif client_input == "/about":
                         image_list = ['./static/bot_images/landing_bot_image.jpeg']
-                        message_test = "ssup hemmie, this is image and text testing"
+                        message_test = f"{user_name}\n\n, I am spendvest bot, I can help you with your micro-savings plan!To access services press /refresh"
                         return test_message_with_image(message_test,image_list)
                     
 
