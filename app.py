@@ -95,9 +95,10 @@ def web_hook():
                         generated_summary = get_user_acc_summary_stmt(user_waid, user_name)
                         # mix with quiz and return output
                         output_message = f"{generated_summary}\n\nMenu:\n\n{quiz}"
+                        image_list = ['./static/bot_images/landing_bot_image.jpeg']
 
                         # Session.step_slotting(user_waid, quiz_pack)
-                        return output_bot_message(output_message)
+                        return test_message_with_image(output_bot_message, image_list)
                     
                     elif client_input == "/about":
                         image_list = ['./static/bot_images/landing_bot_image.jpeg']
