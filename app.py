@@ -98,7 +98,7 @@ def web_hook():
                         image_list = ['./static/bot_images/landing_bot_image.jpeg']
 
                         # Session.step_slotting(user_waid, quiz_pack)
-                        return test_message_with_image(output_bot_message, image_list)
+                        return test_message_with_image(output_message, image_list)
                     
                     elif client_input == "/about":
                         image_list = ['./static/bot_images/landing_bot_image.jpeg']
