@@ -105,8 +105,8 @@ class AccountSummary:
             'pending_settlement':0,
             'amount_deposited':0.00,
             'amount_settled':0.00,
+            'last_amount_saved':0.00,
             'total_amount_saved':0.00,
-            'last_amount_saved':0.00
         }
         redis_client.hmset(key, summary)
          

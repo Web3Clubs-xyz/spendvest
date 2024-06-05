@@ -51,7 +51,7 @@ def web_hook():
             print(f"current handler is : {current_handler}")
             client_input = in_data.get('Body').lower()
             if current_handler == "st_handler":
-                if client_input in ['/reg', '/sm', '/lp', '/lbt', '/lbp', '/st', '/cancel', '/refresh']:
+                if client_input in ['/reg', '/sm', '/lp', '/lbt', '/lbp', '/st', '/cancel', '/refresh', '/about']:
                     if client_input == '/reg':
                         Session.load_handler(user_waid,"ru_handler", "RU", 0, 2)
                         # ask actual first question
@@ -98,6 +98,12 @@ def web_hook():
 
                         # Session.step_slotting(user_waid, quiz_pack)
                         return output_bot_message(output_message)
+                    
+                    elif client_input == "/about":
+                        image_list = ['./static/bot_images/landing_bot_image.jpeg']
+                        message_test = "ssup hemmie, this is image and text testing"
+                        return test_message_with_image(message_test,image_list)
+                    
 
                 else:
                     return output_bot_message("Enter comand /st to proceed")
@@ -299,6 +305,16 @@ def output_bot_message(message):
     print(f"'returning bot output {m}")
     return str(resp)
 
+def test_message_with_image(message, image_url_list):
+    resp = MessagingResponse()
+    msg = resp.message(message)
+    
+    for image_url in image_url_list:
+        msg.media(image_url)
+    
+    m = str(resp)
+    print(f"Returning bot output with images: {m}")
+    return str(resp)
 
 def is_valid_yes_or_no(reg_ans):
     """Check if the input is 'yes' or 'no' after converting to lowercase."""
