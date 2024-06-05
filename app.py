@@ -281,7 +281,7 @@ def get_user_acc_summary_stmt(waid, user_name):
             'last_amount_saved':acc_dict[b'last_amount_saved'].decode('utf-8')
         }
         return_string = f"""
-===========================================
+=====================================
 User: {user_name}
 
 Total Deposit: {summary['total_deposit']}
@@ -291,9 +291,10 @@ Total Settlement: {summary['total_settlement']}
 Amount Deposited: {summary['amount_deposited']}
 Amount Settled: {summary['amount_settled']}
 
+Saving Percentage : 5%
 Total Amount Saved: {summary['total_amount_saved']}
 Last Amount Saved: {summary['last_amount_saved']}
-===========================================
+=====================================
         """
         return return_string.strip()
     else:
