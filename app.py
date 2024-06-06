@@ -95,7 +95,7 @@ def web_hook():
                         generated_summary = get_user_acc_summary_stmt(user_waid, user_name)
                         # mix with quiz and return output
                         output_message = f"{generated_summary}\n\nMenu:\n\n{quiz}"
-                        image_list = ['./static/bot_media/Account.mp4']
+                        image_list = ['./static/bot_media/Account.gif']
 
                         # Session.step_slotting(user_waid, quiz_pack)
                         return test_message_with_image(output_message, image_list)
