@@ -309,8 +309,12 @@ def output_bot_message(message):
 
 def test_message_with_image(message, image_url_list):
     resp = MessagingResponse()
-    msg = resp.message(message)
+    msg = resp.message()
     
+    # Add the text message
+    msg.body(message)
+    
+    # Add each image to the message
     for image_url in image_url_list:
         msg.media(image_url)
     
