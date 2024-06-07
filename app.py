@@ -98,11 +98,37 @@ def web_hook():
                         image_list = ['./static/bot_media/Account.png']
 
                         # Session.step_slotting(user_waid, quiz_pack)
-                        return test_message_with_image(output_message, image_list)
+                        return output_bot_message(output_message)
+                        # return test_message_with_image(output_message, image_list)
                     
                     elif client_input == "/about":
-                        image_list = ['./static/bot_media/AboutUs.mp4']
-                        message_test = f"{user_name}\n\nI am spendvest bot, I can help you with your micro-savings plan!\nTo access services press /refresh"
+                        image_list = ['./static/bot_media/Account.png']
+
+                        # The text to be centered
+                        buttons_text = "Browse   ||  Select   || Cancel"
+
+                        # The length of the bounding box
+                        bounding_box_length = len("=====================================")
+
+                        # Calculate the padding needed to center the text
+                        padding = (bounding_box_length - len(buttons_text)) // 2
+
+                        # Generate the centered buttons text with padding
+                        centered_buttons_text = " " * padding + buttons_text + " " * (bounding_box_length - len(buttons_text) - padding)
+
+                        message_test = f"""
+{user_name}
+
+I am spendvest bot, I can help you with your micro-savings plan!
+To continue select a reply from below: 
+
+{"=" * bounding_box_length}
+            {centered_buttons_text}
+{"=" * bounding_box_length}
+"""
+                        
+                        
+                        # return output_bot_message(message_test)
                         return test_message_with_image(message_test,image_list)
                     
 
@@ -304,7 +330,7 @@ def output_bot_message(message):
     resp = MessagingResponse()
     resp.message(message)
     m = str(resp)
-    print(f"'returning bot output {m}")
+    print(f"returning bot output {m}")
     return str(resp)
 
 def test_message_with_image(message, image_url_list):
@@ -321,6 +347,16 @@ def test_message_with_image(message, image_url_list):
     m = str(resp)
     print(f"Returning bot output with images: {m}")
     return str(resp)
+
+def show_acc_main_message(menu_code):
+    pass 
+
+def show_acc_wallet_message():
+    pass 
+
+def show_sm_message():
+    pass 
+
 
 def is_valid_yes_or_no(reg_ans):
     """Check if the input is 'yes' or 'no' after converting to lowercase."""
