@@ -57,7 +57,7 @@ class Session():
             'user_flow': self.user_flow,
 
             'main_menu_browsing':self.main_menu_browsing,
-            'sub-menu_browsing':self.sub_menu_browsing,
+            'sub_menu_browsing':self.sub_menu_browsing,
             'browsing_count':self.browsing_count,
 
             'current_slot_count': self.current_slot_count,
@@ -91,28 +91,53 @@ class Session():
 
     # utility functions
     @staticmethod
-    def is_main_browsing_main(waid):
+    def is_main_browsing(waid):
         key = f"session:{waid}"
         return redis_client.hget(key,"main_menu_browsing").decode('utf-8')
-     
+    
+    @staticmethod
+    def off_main_browsing(waid):
+        key = f"session:{waid}"
+        return redis_client.hset(key, "main_menu_browsing", 0)
+    
+    @staticmethod
+    def on_main_browsing(waid):
+        key = f"session:{waid}"
+        return redis_client.hset(key, "main_menu_browsing", 1)
+    
     @staticmethod
     def is_first_time_contact(waid):
         return redis_client.sismember('user:set', waid)
     
     @staticmethod
-    def get_browsing_cout(waid):
+    def get_browsing_count(waid):
         key = f"session:{waid}"
         current_count = redis_client.hget(key, "browsing_count").decode('utf-8')
         current_count = int(current_count)
         return current_count
     
     @staticmethod
-    def browse(waid):
+    def browse_main(waid):
+        menu_listing_count = 3
+
         key = f"session:{waid}"
         current_count = redis_client.hget(key, "browsing_count").decode('utf-8')
         current_count = int(current_count)
-        new_count = current_count + 1
+
+        if current_count < menu_listing_count:
+            print(f"increamenting browsing_count")
+            new_count = current_count + 1
+        else:
+            print(f"reseting browsing_count")
+            new_count = 0 
+        
         return redis_client.hset(key,"browsing_count", new_count)
+
+    @staticmethod
+    def reset_browsing_count(waid):
+        new_count = 0
+        key = f"session:{waid}"
+        return redis_client.hset(key, "browsing_count", new_count)
         
     @staticmethod
     def is_slot_filling(waid):

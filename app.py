@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 
-from flask import Flask, request
+from flask import Flask, request, Response
 from twilio.twiml.messaging_response import MessagingResponse, Message
 from twilio.rest import Client
 import urllib
@@ -33,7 +33,7 @@ def generate_uid(length=10):
 
 menu_listing = [
     {
-    'menu_code':'Acc',
+    'menu_code':'ACC',
     'media':['./static/bot_media/Account.png'],
     'menu_message': "Account menu\n\nProceed by selecting one ofthe buttons",
     'menu_button':['Browse', 'Select', 'Cancel']
@@ -44,26 +44,29 @@ menu_listing = [
     'menu_message': "Send Money menu\n\nProceed by selecting one ofthe buttons",
     'menu_button':['Browse', 'Select', 'Cancel']
     },
-    {
-    'menu_code':'LBT',
-    'media':['./static/bot_media/LipaTill.png'],
-    'menu_message': "Lipa Till menu\n\nProceed by selecting one ofthe buttons",
-    'menu_button':['Browse', 'Select', 'Cancel']
-    },
-    {
-    'menu_code':'LBP',
-    'media':['./static/bot_media/LipaPaybill.png'],
-    'menu_message': "Lipa Paybill menu\n\nProceed by selecting one ofthe buttons",
-    'menu_button':['Browse', 'Select', 'Cancel']
-    },
+    # {
+    # 'menu_code':'LBT',
+    # 'media':['./static/bot_media/LipaTill.png'],
+    # 'menu_message': "Lipa Till menu\n\nProceed by selecting one ofthe buttons",
+    # 'menu_button':['Browse', 'Select', 'Cancel']
+    # },
+    # {
+    # 'menu_code':'LBP',
+    # 'media':['./static/bot_media/LipaPaybill.png'],
+    # 'menu_message': "Lipa Paybill menu\n\nProceed by selecting one ofthe buttons",
+    # 'menu_button':['Browse', 'Select', 'Cancel']
+    # },
      {
-    'menu_code':'Abt',
+    'menu_code':'ABT',
     'media':['./static/bot_media/About.png'],
     'menu_message': "About menu\n\nProceed by selecting one ofthe buttons",
     'menu_button':['Browse', 'Select', 'Cancel']
     },
 
 ]
+
+
+slot_handlers = ["ru_handler", "sm_handler", "lp_handler", "lbt_handler", "lbp_handler", "start_handler"]
 
 @app.route("/whatsapp", methods=["POST"])
 def web_hook():
@@ -72,40 +75,181 @@ def web_hook():
     user_name = in_data.get('ProfileName')
     client_input = in_data.get('Body').lower()
 
-    print(f"incoming payload is , {in_data}")
+    print(f"incoming payload is , {in_data}\n\n")
 
     if Session.is_first_time_contact(user_waid):
 
-        if Session.is_main_browsing_main(user_waid):
-            if client_input in ['browse', 'select', 'cancel']:
-                if client_input == "browse":
-                    return output_bot_message(f"you selected : {client_input}")
-                elif client_input == "select":
-                    return output_bot_message(f"you selected : {client_input}")
-                else:
-                    return output_bot_message(f"you selected : {client_input}")
-                 
-            else:
-                message = "please use the selection suggested above"
-                return output_bot_message(message)
-        else:
-            pass 
-        current_count = Session.get_browsing_cout(user_waid)
+        print(f"is not first time contact")
+
+        current_count = Session.get_browsing_count(user_waid)
         menu_payload = menu_listing[current_count]
         print(f"current menu payload : {menu_payload}")
+
         menu_media_list = menu_payload['media']
         menu_message = menu_payload['menu_message']
         menu_buttons = menu_payload['menu_button']
+        menu_code = menu_payload['menu_code']
         
         # The length of the bounding box
         bounding_box_length = len("=====================================")
 
-        # Generate the message with centered buttons
-        message_test = create_message_with_buttons(user_name, menu_message, menu_buttons, bounding_box_length)
+        if int(Session.is_main_browsing(user_waid)) == 1:
+            print(f"user is browsing main menu")
 
-        # Return the final message with images
-        return test_message_with_image(message_test, menu_media_list)
+            if client_input in ['browse', 'select', 'cancel']:
+                if client_input == "browse":
+
+                    print(f"should be stepping browse")
+                    Session.browse_main(user_waid)
+
+                    # Generate the message with centered buttons
+                    if menu_code == "ACC":
+                        print(f"appending account menu_message")
+                        acc_summary = get_user_acc_summary_stmt(user_waid, user_name)
+                        new_message = f"{acc_summary}\n\n{menu_message}"
+                        message_test = create_message_with_buttons(user_name, new_message, menu_buttons, bounding_box_length)
+                    
+                        # Return the final message with images
+                        return test_message_with_image(message_test, menu_media_list)
+
+                    else :
+                        new_message = menu_message 
+                        message_test = create_message_with_buttons(user_name, new_message, menu_buttons, bounding_box_length)
+
+                        return test_message_with_image(message_test, menu_media_list)
     
+                elif client_input == "select":
+                    print(f"user has chosen select")
+
+                    # get current_count
+                    current_browse_count = Session.get_browsing_count(user_waid)
+                    menu_payload = menu_listing[current_browse_count]
+                    print(f"selecting menu payload : {menu_payload}")
+                    menu_code = menu_payload['menu_code']
+
+                    if menu_code == "SM":
+                        Session.off_main_browsing(user_waid)
+
+                        Session.load_handler(user_waid, "sm_handler", "SM",0, 3)
+                        curr_slot_details = Session.fetch_slot_details(user_waid)
+                        menu_code = curr_slot_details['menu_code']
+                        quiz_pack = Menu.load_question_pack(menu_code)
+                        quiz = Session.return_current_slot_quiz(user_waid, quiz_pack)
+                        Session.step_slotting(user_waid, quiz_pack)
+                        return output_bot_message(quiz)
+                    
+                    elif menu_code == "ACC":
+                        return output_bot_message("You selected account menu")
+                    elif menu_code == "LBT":
+                        return output_bot_message("You selected lipa till")
+                    elif menu_code == "LBP":
+                        return output_bot_message("You selected lipa paybill")
+                    elif menu_code == "ABT":
+                        return output_bot_message("You have selected about page")
+                    
+
+                    return output_bot_message(f"you selected : {client_input}")
+                else:
+                    Session.reset_browsing_count(user_waid)
+
+                    current_count = Session.get_browsing_count(user_waid)
+                    menu_payload = menu_listing[current_count]
+                    print(f"current menu payload : {menu_payload}")
+
+                    menu_media_list = menu_payload['media']
+                    menu_message = menu_payload['menu_message']
+                    menu_buttons = menu_payload['menu_button']
+        
+                    # The length of the bounding box
+                    bounding_box_length = len("=====================================")
+
+                    # Generate the message with centered buttons
+                    message_test = create_message_with_buttons(user_name, menu_message, menu_buttons, bounding_box_length)
+
+                    # Return the final message with images
+                    return test_message_with_image(message_test, menu_media_list)
+
+            else:
+                message = "please use the selection suggested above or type cancel"
+                return output_bot_message(message)
+        
+        else:
+            # assuming user is slotfilling for current handler
+            # check for current_handler
+            # if..else... the process ['sm_handler', '']
+            print(f"user is slotfilling\n")
+
+            current_handler = Session.get_session(user_waid)[b'current_slot_handler'].decode('utf-8')
+            if current_handler == "sm_handler":
+                curr_slot_details = Session.fetch_slot_details(user_waid)          
+                menu_code = curr_slot_details['menu_code']
+                count_ = curr_slot_details['slot_count']
+                print(f"processing menu code {menu_code}, current_count {count_}")
+                print(f"type for count_ {type(count_)}")
+                count_ = int(count_)
+
+                if count_ == 0 or count_ == 1:
+                    print(f"count is eith 0 or 1, {count_}")
+                    # process quiz1
+                    if is_valid_phone_number(client_input):
+                        print(f"{client_input}, is valid")
+                    
+                        Session.save_answer(user_waid, count_, client_input)
+                    
+                        if Session.complete_sm_slotting(user_waid):
+                            message = f"Your request for Send Money task has been submitted,\n\nPlease wait for Mpesa prompt on +{user_waid}\n\nThen enter your Mpesa PIN\n\nThank you 😊"
+                            Session.load_handler(user_waid, 'st_handler', 'ST', 0, 1)
+                            Session.clear_answer_slot(user_waid)
+
+                            print(f"user number is : {user_waid}")
+                            
+                            return output_bot_message(message)
+                        else:
+                            quiz_pack = Menu.load_question_pack(menu_code)
+                            quiz = Session.return_current_slot_quiz(user_waid, quiz_pack)
+                    
+                            Session.step_slotting(user_waid, quiz_pack)
+                    
+                        return output_bot_message(quiz)
+                    else:
+                        print(f"{client_input}, is invalid")
+                        message = "Error\n\nThat input was invalid"
+                        return output_bot_message(message) 
+                     
+                elif count_ == 2:
+                    print(f"count is 2")
+                    if is_valid_payment_amount(client_input):
+                        print(f"valid payment number : {client_input}")
+                        Session.save_answer(user_waid, count_, client_input)
+                        if Session.complete_sm_slotting(user_waid):
+                            message = f"Your request for Send Money task has been submitted,\n\nPlease wait for Mpesa prompt on +{user_waid}\n\nThen enter your Mpesa PIN\n\nThank you 😊"
+                            Session.load_handler(user_waid, 'st_handler', 'ST', 0, 1)
+                            
+                            print(f"user number is : {user_waid}")
+                            end_number = Session.load_ans_payload(user_waid)
+                            end_number = json.loads(end_number)
+                            print(f"end_number_list : {end_number}")
+                            print(f"end_number to set : {end_number[0]}, of type : {type(end_number[0])}")
+                            Session.clear_answer_slot(user_waid)
+                            depo_amount = int(client_input) * 0.05 + int(client_input)
+                            send_user_stk(user_waid, depo_amount,'SM', end_number[0])
+                            
+                            Session.on_main_browsing(user_waid)
+
+                            return output_bot_message(message)
+                        else:
+                            quiz_pack = Menu.load_question_pack(menu_code)
+                            quiz = Session.return_current_slot_quiz(user_waid, quiz_pack)
+                            Session.step_slotting(user_waid, quiz_pack)
+                            return output_bot_message(quiz)
+                    else:
+                        print(f"{client_input}, is invalid")
+                        message = "Error\n\nThat input was invalid"
+                        return output_bot_message(message)  
+                  
+            elif current_handler == "ru_handler":
+                pass 
+            return 'ok' 
         
     else:
         print("new user to create session")
@@ -128,25 +272,29 @@ def web_hook():
         new_user_session.save()
         AccountSummary.add_summary(user_waid)
         
-        current_count = Session.get_browsing_cout(user_waid)
+        current_count = Session.get_browsing_count(user_waid)
+
         menu_payload = menu_listing[current_count]
         print(f"current menu payload : {menu_payload}")
+
         menu_media_list = menu_payload['media']
         menu_message = menu_payload['menu_message']
         menu_buttons = menu_payload['menu_button']
+        menu_code = menu_payload['menu_code']
+
+        if menu_code == "ACC":
+            print(f"appending account 2 menu_message")
+
+            acc_summary = get_user_acc_summary_stmt(user_waid, user_name)
+            new_message = f"{acc_summary}\n\n{menu_message}"
+            # The length of the bounding box
+            bounding_box_length = len("=====================================")
+
+            message_test = create_message_with_buttons(user_name, new_message, menu_buttons, bounding_box_length)
+            
         
-        # The length of the bounding box
-        bounding_box_length = len("=====================================")
-
-        # Generate the message with centered buttons
-        message_test = create_message_with_buttons(user_name, menu_message, menu_buttons, bounding_box_length)
-
-        # Return the final message with images
         return test_message_with_image(message_test, menu_media_list)
-    
-         
-
-     
+        
 
 
 def get_user_acc_summary_stmt(waid, user_name):
@@ -173,8 +321,8 @@ Amount Deposited: {summary['amount_deposited']}
 Amount Settled: {summary['amount_settled']}
 
 Saving Percentage : 5%
-Total Amount Saved: {summary['total_amount_saved']}
 Last Amount Saved: {summary['last_amount_saved']}
+Total Amount Saved: {summary['total_amount_saved']}
 =====================================
         """
         return return_string.strip()
@@ -238,14 +386,7 @@ def test_message_with_image(message, image_url_list):
     print(f"Returning bot output with images: {m}")
     return str(resp)
 
-def show_acc_main_message(menu_code):
-    pass 
-
-def show_acc_wallet_message():
-    pass 
-
-def show_sm_message():
-    pass 
+ 
 
 
 def is_valid_yes_or_no(reg_ans):
@@ -287,6 +428,9 @@ def convert_phone_number(byte_phone_number):
     phone_number_int = int(phone_number_str)
     
     return phone_number_int
+
+
+
 
 # mpesa
 @app.route("/mpesa_callback", methods=['POST'])
