@@ -104,7 +104,24 @@ class Session():
     def on_main_browsing(waid):
         key = f"session:{waid}"
         return redis_client.hset(key, "main_menu_browsing", 1)
-    
+
+    @staticmethod
+    def is_submenu_browsing(waid):
+        key = f"session:{waid}"
+        return redis_client.hget(key,"main_menu_browsing").decode('utf-8')
+
+    @staticmethod
+    def on_submenu_browsing(waid):
+        key = f"session:{waid}"
+        return redis_client.hset(key, "sub_menu_browsing", 1) 
+
+    @staticmethod
+    def off_submenu_browsing(waid):
+        key = f"session:{waid}"
+        return redis_client.hset(key, "sub_menu_browsing", 0) 
+
+
+
     @staticmethod
     def is_first_time_contact(waid):
         return redis_client.sismember('user:set', waid)

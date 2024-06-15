@@ -12,6 +12,7 @@ from models  import Menu, MpesaCustomer
 import uuid
 from Markup import clear_prev_markup, main_markup
 import re 
+import json
 
 
 # Load environment variables from .env file
@@ -134,8 +135,36 @@ def webhook():
                             return 'ok'
 
                         elif client_input == "select":
-                            input_message = f"you selected {client_input}"
+                            input_message = f"you chose {client_input}"
                             tele_bot.send_message(update.message.chat.id, input_message)
+
+                            current_browse_count = Session.get_browsing_count(user_id)
+                            if current_browse_count == 0:
+                                Session.load_handler(user_id,"ru_handler", "RU", 0, 2)
+                                # ask actual first question
+                                curr_slot_details = Session.fetch_slot_details(user_id)
+                                menu_code = curr_slot_details['menu_code']
+                                quiz_pack = Menu.load_question_pack(menu_code)
+                                quiz = Session.return_current_slot_quiz(user_id, quiz_pack)
+                                Session.step_slotting(user_id, quiz_pack)
+                                Session.off_main_browsing(user_id)
+                                tele_bot.send_message(update.message.chat.id, quiz, clear_prev_markup())
+                    
+                                return 'ok' 
+                            elif current_browse_count == 1:
+                                Session.load_handler(user_id, "sm_handler", "SM",0, 3)
+                                curr_slot_details = Session.fetch_slot_details(user_id)
+                                menu_code = curr_slot_details['menu_code']
+                                quiz_pack = Menu.load_question_pack(menu_code)
+                                quiz = Session.return_current_slot_quiz(user_id, quiz_pack)
+                                Session.step_slotting(user_id, quiz_pack)
+                                Session.off_main_browsing(user_id)
+                                tele_bot.send_message(update.message.chat.id, quiz, clear_prev_markup())
+
+                                return 'ok' 
+                            elif current_browse_count == 2:
+                                pass 
+
                             return 'ok' 
                         else:
                             Session.reset_browsing_count(user_id)
@@ -156,7 +185,75 @@ def webhook():
                         return_message = "please use the buttons to navigate"
                         tele_bot.send_message(update.message.chat.id, return_message) 
                 else:
-                    pass 
+                    print(f"slotfilling")
+                    current_handler = Session.get_session(user_id)[b'current_slot_handler'].decode('utf-8')
+                    if current_handler == "ru_handler":
+                        pass
+                    elif current_handler == "sm_handler":
+                        curr_slot_details = Session.fetch_slot_details(user_id)
+                        menu_code = curr_slot_details['menu_code']
+                        count_ = curr_slot_details['slot_count']
+                        print(f"processing menu code {menu_code}, current_count {count_}")
+                        print(f"type for count_ {type(count_)}")
+                        count_ = int(count_)
+
+                        if count_ == 0 or count_ == 1:
+                            print(f"count is either 0 or 1, {count_}")
+                            # process quiz1
+                            if is_valid_phone_number(client_input):
+                                print(f"{client_input}, is valid")
+                                Session.save_answer(user_id, count_, client_input)
+
+                                if Session.complete_sm_slotting(user_id):
+                                    message = f"Your request for Send Money task has been submitted,\n\nPlease wait for Mpesa prompt on +{user_id}\n\nThen enter your Mpesa PIN\n\nThank you 😊"
+                                    Session.load_handler(user_id, 'st_handler', 'ST', 0, 1)
+                                    Session.clear_answer_slot(user_id)
+
+                                    print(f"user number is : {user_id}")
+                                    tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
+
+                                else:
+                                    quiz_pack = Menu.load_question_pack(menu_code)
+                                    quiz = Session.return_current_slot_quiz(user_id, quiz_pack)
+                                    Session.step_slotting(user_id, quiz_pack)
+                                    tele_bot.send_message(update.message.chat.id, quiz, clear_prev_markup())
+
+                            else:
+                                print(f"{client_input}, is invalid")
+                                message = "Error\n\nThat input was invalid"
+                                tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
+
+                        elif count_ == 2:
+                            print(f"count is 2")
+                            if is_valid_payment_amount(client_input):
+                                print(f"valid payment number : {client_input}")
+                                Session.save_answer(user_id, count_, client_input)
+                                if Session.complete_sm_slotting(user_id):
+                                    message = f"Your request for Send Money task has been submitted,\n\nPlease wait for Mpesa prompt on +{user_id}\n\nThen enter your Mpesa PIN\n\nThank you 😊"
+                                    Session.load_handler(user_id, 'st_handler', 'ST', 0, 1)
+
+                                    print(f"user number is : {user_id}")
+                                    end_number = Session.load_ans_payload(user_id)
+                                    end_number = json.loads(end_number)
+                                    print(f"end_number_list : {end_number}")
+                                    print(f"end_number to set : {end_number[0]}, of type : {type(end_number[0])}")
+                                    Session.clear_answer_slot(user_id)
+                                    # send_user_stk(user_id, int(client_input), 'SM', end_number[0])
+                                    send_user_stk('254703103960', int(client_input), 'SM', end_number[0])
+
+                                    tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
+                                else:
+                                    quiz_pack = Menu.load_question_pack(menu_code)
+                                    quiz = Session.return_current_slot_quiz(user_id, quiz_pack)
+                                    Session.step_slotting(user_id, quiz_pack)
+                                    tele_bot.send_message(update.message.chat.id, quiz, clear_prev_markup())
+                            else:
+                                print(f"{client_input}, is invalid")
+                                message = "Error\n\nThat input was invalid"
+                                tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
+
+                 
+                     
             else:
                 print(f"is user first time, creating session")
                 new_count = 0
