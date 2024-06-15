@@ -18,6 +18,7 @@ multidict==6.0.5
 packaging==24.0
 PyJWT==2.8.0
 python-dotenv==1.0.1
+pyTelegramBotAPI==3.6.6
 redis==5.0.4
 requests==2.32.3
 twilio==9.1.0
