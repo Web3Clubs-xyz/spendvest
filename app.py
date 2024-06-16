@@ -446,6 +446,9 @@ def process_callback_timeout():
 
     return 'ok'
 
+@app.route("/test4")
+def process_if_up():
+    return 'yyup, up'
 
 if __name__ == '__main__':
     with app.app_context():
