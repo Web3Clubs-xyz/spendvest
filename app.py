@@ -450,6 +450,6 @@ def process_callback_timeout():
 if __name__ == '__main__':
     with app.app_context():
         time.sleep(0.5)
-        tele_bot.set_webhook(url="https://ffb5-154-127-6-35.ngrok-free.app/telegram")
+        tele_bot.set_webhook(url="https://spendvest-bot.onrender.com/telegram")
 
     app.run(debug=True, port=1000)

@@ -42,7 +42,7 @@ def register_callback_url():
 
     body = {
         "MerchantCode": "600980",  # Replace with the actual merchant code
-        "ConfirmationUrl": "https://ffb5-154-127-6-35.ngrok-free.app/mpesa_callback"
+        "ConfirmationUrl": "https://spendvest-bot.onrender.com/mpesa_callback"
     }
 
     response = requests.post(url, headers=headers, json=body)
@@ -74,7 +74,7 @@ def send_user_stk(user_number, amount, menu_code, end_number):
         "Currency": "KES",
         "Amount": amount,
         "TransactionFee": 0,
-        "CallBackURL": "https://ffb5-154-127-6-35.ngrok-free.app/mpesa_callback"
+        "CallBackURL": "https://spendvest-bot.onrender.com/mpesa_callback"
     }
 
     response = requests.post(url, headers=headers, json=body)
@@ -90,7 +90,7 @@ def send_user_stk(user_number, amount, menu_code, end_number):
             Settlement.add_settlement(end_number,menu_code, amount, False, r['MerchantRequestID'])
             summary = AccountSummary.get_acc_summary(user_number)
 
-            print(f"fetched summary is : {summary}")
+            print(f"fetched")
 
             AccountSummary.update_acc_summary(user_number, {
                 'total_deposit':int(summary[b'total_deposit'].decode('utf-8')) + 1,
