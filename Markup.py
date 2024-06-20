@@ -1,32 +1,35 @@
-from telebot.types import  InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, ForceReply, InputMediaVideo
-
-def clear_prev_markup():
-    clear_prev_keyboard = ReplyKeyboardRemove(selective=False)
-    return clear_prev_keyboard
-
-def prompt_input_markup():
-    markup = ForceReply(selective=False)
-    return markup
-
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, ForceReply
 
 def main_markup():
-    markup = ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
+    markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    markup.row_width = 1
     browse_btn = KeyboardButton('Browse')
     select_btn = KeyboardButton('Select')
     cancel_btn = KeyboardButton('Cancel')
-
     markup.add(browse_btn, select_btn, cancel_btn)
     return markup
 
-def wallet_markup():
-    markup = ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    refresh_btn = KeyboardButton('Refresh')
-    withdraw_btn = KeyboardButton('Withdraw')
-    done_btn = KeyboardButton('Done')
+def acc_submenu_one():
+    markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    markup.row_width = 1
+    register_btn = KeyboardButton("Register")
+    refresh_btn = KeyboardButton("Refresh")
+    withdraw_btn = KeyboardButton("Withdraw")
+    done_btn = KeyboardButton("Done")
+    markup.add(register_btn, refresh_btn, withdraw_btn, done_btn)
+    return markup  
 
-    markup.add(refresh_btn, withdraw_btn, done_btn)
-    return markup 
+def abt_submenu():
+    markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    markup.row_width = 1
+    done_btn = KeyboardButton("Done")
+    markup.add(done_btn)
+    return markup
 
+def clear_prev_markup():
+    # Returning an empty markup to clear previous markup
+    return ReplyKeyboardRemove()
 
-
-
+def force_reply_markup():
+    # For forcing a reply from the user
+    return ForceReply(selective=False)

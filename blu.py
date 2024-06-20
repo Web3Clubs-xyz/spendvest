@@ -38,6 +38,7 @@ class Session():
         
         self.main_menu_browsing = main_menu_browsing
         self.sub_menu_browsing =  sub_menu_browsing
+        self.sub_menu = ''
         self.browsing_count = browsing_count
 
         self.current_slot_count = current_slot_count
@@ -58,6 +59,7 @@ class Session():
 
             'main_menu_browsing':self.main_menu_browsing,
             'sub_menu_browsing':self.sub_menu_browsing,
+            'sub_menu':self.sub_menu,
             'browsing_count':self.browsing_count,
 
             'current_slot_count': self.current_slot_count,
@@ -118,10 +120,19 @@ class Session():
     @staticmethod
     def off_submenu_browsing(waid):
         key = f"session:{waid}"
+        redis_client.hset(key, 'sub_menu', '')
         return redis_client.hset(key, "sub_menu_browsing", 0) 
 
-
-
+    @staticmethod
+    def load_submenu(waid, submenu):
+        key = f"session:{waid}"
+        return redis_client.hset(key, 'sub_menu', submenu)
+    
+    @staticmethod
+    def get_current_submenu(waid):
+        key = f"session:{waid}"
+        return redis_client.hget(key, "sub_menu").decode('utf-8')
+    
     @staticmethod
     def is_first_time_contact(waid):
         return redis_client.sismember('user:set', waid)
@@ -151,6 +162,56 @@ class Session():
         return redis_client.hset(key,"browsing_count", new_count)
 
     @staticmethod
+    def browse_submain(waid):
+        curr_submenu = Session.get_current_submenu(waid)
+
+        if curr_submenu == "acc_submenu_listing":
+            list_length = 3
+            key = f"session:{waid}"
+            current_count = redis_client.hget(key, "browsing_count").decode('utf-8')
+            current_count = int(current_count)
+
+            if current_count < list_length:
+                print(f"increamenting browsing_count acc_submenu_listing")
+                new_count = current_count + 1
+            else:
+                print(f"reseting browsing_count")
+                new_count = 0 
+        
+            return redis_client.hset(key,"browsing_count", new_count)
+ 
+        elif curr_submenu == "tsk_submenu_listing":
+            list_length = 1
+            key = f"session:{waid}"
+            current_count = redis_client.hget(key, "browsing_count").decode('utf-8')
+            current_count = int(current_count)
+
+            if current_count < list_length:
+                print(f"increamenting browsing_count tsk_submenu_listing")
+                new_count = current_count + 1
+            else:
+                print(f"reseting browsing_count")
+                new_count = 0 
+        
+            return redis_client.hset(key,"browsing_count", new_count)
+              
+        elif curr_submenu == "abt_submenu_listing":
+            list_length = 1
+            key = f"session:{waid}"
+            current_count = redis_client.hget(key, "browsing_count").decode('utf-8')
+            current_count = int(current_count)
+
+            if current_count < list_length:
+                print(f"increamenting browsing_count abt_submenu_listing")
+                new_count = current_count + 1
+            else:
+                print(f"reseting browsing_count")
+                new_count = 0 
+        
+            return redis_client.hset(key,"browsing_count", new_count) 
+         
+
+    @staticmethod
     def reset_browsing_count(waid):
         new_count = 0
         key = f"session:{waid}"
@@ -177,6 +238,9 @@ class Session():
                                                       "current_slot_count":current_slot_count,
                                                       "slot_quiz_count":quiz_count})
     
+
+
+
     @staticmethod
     def fetch_slot_details(waid):
         user_session = Session.get_session(waid)

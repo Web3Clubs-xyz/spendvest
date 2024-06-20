@@ -46,35 +46,57 @@ def generate_uid(length=10):
 main_menu_listing = [
     {
         'menu_code': 'ACC',
-        'media': ['https://ibb.co/TPByKzF'],
+        'media': ['https://ibb.co/NrKq46z'],
         'menu_message': "Account menu\n\nProceed by selecting one of the buttons",
-        'menu_sticker':'CAACAgIAAxkBAANzZmxCgEYuHF3IpoGd7NFQCENjHO8AAjY_AAL8N0hJftW8yfivq4Y1BA'
+        'menu_sticker':'CAACAgIAAxkBAAIE7mZy7_qRkDcbEmP3mGwAAeHd3qfyggACNAADwZxgDP8a5OfWWHRQNQQ'
     },
     {
-        'menu_code': 'SM',
-        'media': ['https://ibb.co/b1wCMxd'],
-        'menu_message': "Send Money menu\n\nProceed by selecting one of the buttons",
-        'menu_sticker':'CAACAgIAAxkBAAIBZGZs9KXiH_ZL4fk3xaFKQDZt5cJHAALDPQACzBMpSoUPzZoaigNGNQQ'
+        'menu_code': 'TSK',
+        'media': ['https://ibb.co/cL3hmWQ'],
+        'menu_message': "Request Task menu\n\nProceed by selecting one of the buttons",
+        'menu_sticker':'CAACAgIAAxkBAAIE8mZy8cczs7MMMxHnh_HY5oh2T9wpAAK3AAP3AsgPkPG2BzshSB01BA'
     },
     {
         'menu_code': 'ABT',
         'media': ['https://ibb.co/mH3qLVL'],
         'menu_message': "About menu\n\nProceed by selecting one of the buttons",
-        'menu_sticker':'CAACAgIAAxkBAAIBYGZs9Evmq29uftu5IIEYYavi5YSGAAJHOQACXlZxSlYd7J-sP8XeNQQ'
+        'menu_sticker':'CAACAgIAAxkBAAIE9mZy8gABviXQSyg6H2gk0fG1C4TQrQACbQADpsrIDMzP5klyYCgJNQQ'
     },  
 ]
 
+acc_submenu_listing = [{
+    'menu_code':'acc_a',
+    'media':['https://ibb.co/M12tDZc'],
+    'menu_message':"Register sub menu\n\nProceed by selectingone of the buttons",
+    'menu_sticker':'CAACAgIAAxkBAAIE_mZy8knmFGj0uTwgkfZeVcNT6X5QAAI8AAPBnGAMnT29Tay9Qbk1BA'
+},
+{
+    'menu_code':'acc_b',
+    'media':['https://ibb.co/hK7LXrm'],
+    'menu_message':"Wallet sub menu\n\nProceed by selecting one of the buttons",
+    'menu_sticker':'CAACAgIAAxkBAAIFAmZy8mFtAAHKIsabXRtHNtkbh7pphQACOAADwZxgDA6ToHc1KTAqNQQ'
+},
+{
+    'menu_code':'acc_c',
+    'media':['https://ibb.co/gTLH5hC'],
+    'menu_message':"Withdraw sub menu\n\nProceed by selecting one of the buttons",
+    'menu_sticker':'CAACAgIAAxkBAAIFBmZy8npVYgr5YruHVPnIJNFqDzDkAAJLAAPBnGAMAAH3CziPiOBmNQQ'
+}]
 
-@tele_bot.message_handler(commands=['test1'])
-def test1(message):
-    # Send a typing action to indicate that the bot is processing
-    tele_bot.send_chat_action(message.chat.id, 'typing')
-    sticker_id = "CAACAgIAAxkBAANzZmxCgEYuHF3IpoGd7NFQCENjHO8AAjY_AAL8N0hJftW8yfivq4Y1BA"
-    tele_bot.send_sticker(message.chat.id,sticker_id)
-    # Define the link to the image
-    image_link = 'https://i.ibb.co/ck8CxYG/Spend-Vest.png'  # Replace this with your actual image URL
-    # Send a message with the link to the image
-    tele_bot.send_message(message.chat.id, f"Here is the image you requested: {image_link}")
+
+tsk_submenu_listing = [{
+    'menu_code':'tsk_a',
+    'media':['https://ibb.co/hVRgBpM'],
+    'menu_message':"Send money sub menu\n\nProceed by selecting one of the buttons",
+    'menu_sticker':'CAACAgIAAxkBAAIFCmZy8qzJS9h4IzErfgQcyE338EcsAALDAAP3AsgPknDgAAFrl2NlNQQ'
+}]
+
+abt_submenu_listing = [{
+    'menu_code':'abt_a',
+    'media':['https://ibb.co/VjtwrcB'],
+    'menu_message':'About summary\n\nProceed by selecting the button below',
+    'menu_sticker':'CAACAgIAAxkBAAIFDmZy8utttisg1-BhZrlmHDORMi7mAAKGAAOmysgMdfHgn18JJQI1BA'
+}]
 
 
 @tele_bot.message_handler(content_types=['sticker'])
@@ -94,6 +116,7 @@ def handle_sticker(message):
     tele_bot.send_sticker(message.chat.id, response_sticker_file_id)
 
 
+
 @app.route('/telegram', methods=['POST'])
 def webhook():
     if request.headers.get('content-type') == 'application/json':
@@ -102,20 +125,19 @@ def webhook():
 
         # Process the update only once
         tele_bot.process_new_updates([update])
-
-        # Extract necessary information from the update
+    
         if update.message:
             user_id = update.message.from_user.id
             user_name = update.message.from_user.username
             client_input = update.message.text.lower() if update.message.text else ''
 
-            # Print or process the extracted data
+                # Print or process the extracted data
             print(f"User ID: {user_id}, Username: {user_name}, Client Input: {client_input}")
-
             if Session.is_first_time_contact(user_id):
-                print(f"is continuing user ")
-                if int(Session.is_main_browsing(user_id))==1:
-                    if client_input in ['browse', 'select', 'cancel']:
+                print(f"is continuing user")
+                if int(Session.is_main_browsing(user_id)) ==1:
+
+                    if client_input in ["browse", "select", "cancel"]:
                         if client_input == "browse":
                             Session.browse_main(user_id)
 
@@ -130,44 +152,14 @@ def webhook():
 
                             tele_bot.send_sticker(update.message.chat.id, sticker_file_id)
                             tele_bot.send_photo(update.message.chat.id, image_link)
-                            tele_bot.send_message(user_id, f"{menu_payload['menu_message']}", main_markup())
+                            tele_bot.send_message(user_id, f"{menu_payload['menu_message']}", reply_markup=main_markup())
 
                             return 'ok'
-
-                        elif client_input == "select":
-                            input_message = f"you chose {client_input}"
-                            tele_bot.send_message(update.message.chat.id, input_message)
-
-                            current_browse_count = Session.get_browsing_count(user_id)
-                            if current_browse_count == 0:
-                                Session.load_handler(user_id,"ru_handler", "RU", 0, 2)
-                                # ask actual first question
-                                curr_slot_details = Session.fetch_slot_details(user_id)
-                                menu_code = curr_slot_details['menu_code']
-                                quiz_pack = Menu.load_question_pack(menu_code)
-                                quiz = Session.return_current_slot_quiz(user_id, quiz_pack)
-                                Session.step_slotting(user_id, quiz_pack)
-                                Session.off_main_browsing(user_id)
-                                tele_bot.send_message(update.message.chat.id, quiz, clear_prev_markup())
-                    
-                                return 'ok' 
-                            elif current_browse_count == 1:
-                                Session.load_handler(user_id, "sm_handler", "SM",0, 3)
-                                curr_slot_details = Session.fetch_slot_details(user_id)
-                                menu_code = curr_slot_details['menu_code']
-                                quiz_pack = Menu.load_question_pack(menu_code)
-                                quiz = Session.return_current_slot_quiz(user_id, quiz_pack)
-                                Session.step_slotting(user_id, quiz_pack)
-                                Session.off_main_browsing(user_id)
-                                tele_bot.send_message(update.message.chat.id, quiz, clear_prev_markup())
-
-                                return 'ok' 
-                            elif current_browse_count == 2:
-                                pass 
-
-                            return 'ok' 
-                        else:
+                        
+                        if client_input == "cancel":
+                            # cancel selected
                             Session.reset_browsing_count(user_id)
+
                             current_count = Session.get_browsing_count(user_id)
                             menu_payload = main_menu_listing[current_count]
                             print(f"current payload after reseting \n\n {menu_payload}")
@@ -179,85 +171,165 @@ def webhook():
 
                             tele_bot.send_sticker(update.message.chat.id, sticker_file_id)
                             tele_bot.send_photo(update.message.chat.id, image_link)
-                            tele_bot.send_message(user_id, f"{menu_payload['menu_message']}", main_markup())
+                            tele_bot.send_message(user_id, f"{menu_payload['menu_message']}", reply_markup=main_markup())
+                            return 'ok'
+                        
+                        if client_input == "select":
+                            current_count = Session.get_browsing_count(user_id)
+                            menu_payload = main_menu_listing[current_count]
+                            print(f"selected payload\n\n {menu_payload}")
+                            menu_code = menu_payload['menu_code']
+
+                            if menu_code in ['ACC', 'TSK', 'ABT']:
+                                # activate submenu navigation
+                                Session.off_main_browsing(user_id)
+                                Session.reset_browsing_count(user_id)
+                                Session.on_submenu_browsing(user_id)
+
+                                if menu_code == "ACC":
+                                    Session.load_submenu(user_id, 'acc_submenu_listing')
+
+                                    # load
+                                    submenu_payload = acc_submenu_listing[0]
+                                    submenu_message = submenu_payload['menu_message']
+                                    submenu_sticker = submenu_payload['menu_sticker']
+                                    submenu_media = submenu_payload['media'][0]
+
+                                    tele_bot.send_sticker(user_id, submenu_sticker)
+                                    tele_bot.send_photo(user_id, submenu_media)
+                                    tele_bot.send_message(user_id, submenu_message)
+                                    return 'ok'
+                                
+                                elif menu_code == "TSK":
+                                    Session.load_submenu(user_id, 'tsk_submenu_listing')
+
+                                    # load
+                                    submenu_payload = tsk_submenu_listing[0]
+                                    submenu_message = submenu_payload['menu_message']
+                                    submenu_sticker = submenu_payload['menu_sticker']
+                                    submenu_media = submenu_payload['media'][0]
+
+                                    tele_bot.send_sticker(user_id, submenu_sticker)
+                                    tele_bot.send_photo(user_id, submenu_media)
+                                    tele_bot.send_message(user_id, submenu_message)
+                                    return 'ok'
+                                
+                                elif menu_code == "ABT":
+                                    Session.load_submenu(user_id, 'abt_submenu_listing')
+
+                                    # load
+                                    submenu_payload = abt_submenu_listing[0]
+                                    submenu_message = submenu_payload['menu_message']
+                                    submenu_sticker = submenu_payload['menu_sticker']
+                                    submenu_media = submenu_payload['media'][0]
+
+                                    tele_bot.send_sticker(user_id, submenu_sticker)
+                                    tele_bot.send_photo(user_id, submenu_media)
+                                    tele_bot.send_message(user_id, submenu_message)
+                                    return 'ok'
+
+                    else:
+                        return_message = "please use the buttons to navigate" 
+                        tele_bot.send_message(user_id, return_message, main_markup())
+                        return 'ok'
+
+                else:
+                    print(f"could be slotfilling or sub_menu processing\n\n")
+                    if Session.is_submenu_browsing(user_id):
+                        if client_input in ['browse', 'select', 'cancel']:
+                            if client_input == "browse":
+                                sub_menu = Session.get_current_submenu(user_id)
+                                browsing_count = Session.get_browsing_count(user_id)
+
+                                print(f"browsing submenu, should get the current submenu : {sub_menu}, and count is :{browsing_count}\n\n")
+
+                                Session.browse_submain(user_id)
+
+                                current_count = Session.get_browsing_count(user_id)
+
+                                if sub_menu == "acc_submenu_listing":
+                                    menu_payload = acc_submenu_listing[current_count]
+                                    
+                                    # Send the message with buttons and media
+
+                                    tele_bot.send_chat_action(update.message.chat.id, 'typing')
+                                    sticker_file_id = menu_payload['menu_sticker']
+                                    image_link = menu_payload['media'][0]
+
+                                    tele_bot.send_sticker(update.message.chat.id, sticker_file_id)
+                                    tele_bot.send_photo(update.message.chat.id, image_link)
+                                    tele_bot.send_message(user_id, f"{menu_payload['menu_message']}", reply_markup=main_markup())
+                                    return 'ok'
+                                
+                                elif sub_menu == "tsk_submenu_listing":
+                                    menu_payload = tsk_submenu_listing[current_count]
+                                    
+                                    # Send the message with buttons and media
+
+                                    tele_bot.send_chat_action(update.message.chat.id, 'typing')
+                                    sticker_file_id = menu_payload['menu_sticker']
+                                    image_link = menu_payload['media'][0]
+
+                                    tele_bot.send_sticker(update.message.chat.id, sticker_file_id)
+                                    tele_bot.send_photo(update.message.chat.id, image_link)
+                                    tele_bot.send_message(user_id, f"{menu_payload['menu_message']}", reply_markup=main_markup())
+                                    return 'ok' 
+                                
+                                elif sub_menu == "abt_submenu_listing":
+                                    menu_payload = abt_submenu_listing[current_count]
+                                    
+                                    # Send the message with buttons and media
+
+                                    tele_bot.send_chat_action(update.message.chat.id, 'typing')
+                                    sticker_file_id = menu_payload['menu_sticker']
+                                    image_link = menu_payload['media'][0]
+
+                                    tele_bot.send_sticker(update.message.chat.id, sticker_file_id)
+                                    tele_bot.send_photo(update.message.chat.id, image_link)
+                                    tele_bot.send_message(user_id, f"{menu_payload['menu_message']}", reply_markup=main_markup())
+                                    return 'ok' 
+
+                                
+                            
+                            elif client_input == "cancel":
+                                Session.reset_browsing_count(user_id)
+                                Session.off_submenu_browsing(user_id)
+                                Session.on_main_browsing(user_id)
+
+                                current_count = Session.get_browsing_count(user_id)
+                                menu_payload = main_menu_listing[current_count]
+                                print(f"current payload after reseting \n\n {menu_payload}")
+
+                                tele_bot.send_chat_action(update.message.chat.id, 'typing')
+                                sticker_file_id = menu_payload['menu_sticker']
+                                image_link = menu_payload['media'][0]
+
+                                tele_bot.send_sticker(update.message.chat.id, sticker_file_id)
+                                tele_bot.send_photo(update.message.chat.id, image_link)
+                                tele_bot.send_message(user_id, f"{menu_payload['menu_message']}", reply_markup=main_markup())
+                                return 'ok'
+                             
+                            elif client_input == "select":
+                                print(f"begining slotfilling \n\n")
+                                # should off submenu browsing
+                                # should activate slot filling
+
+                                return 'ok'
+
+                        else:
+                            return_message = "please use the buttons below to proceed" 
+                            tele_bot.send_message(user_id, return_message)
                             return 'ok'
                     else:
-                        return_message = "please use the buttons to navigate"
-                        tele_bot.send_message(update.message.chat.id, return_message) 
-                else:
-                    print(f"slotfilling")
-                    current_handler = Session.get_session(user_id)[b'current_slot_handler'].decode('utf-8')
-                    if current_handler == "ru_handler":
-                        pass
-                    elif current_handler == "sm_handler":
-                        curr_slot_details = Session.fetch_slot_details(user_id)
-                        menu_code = curr_slot_details['menu_code']
-                        count_ = curr_slot_details['slot_count']
-                        print(f"processing menu code {menu_code}, current_count {count_}")
-                        print(f"type for count_ {type(count_)}")
-                        count_ = int(count_)
-
-                        if count_ == 0 or count_ == 1:
-                            print(f"count is either 0 or 1, {count_}")
-                            # process quiz1
-                            if is_valid_phone_number(client_input):
-                                print(f"{client_input}, is valid")
-                                Session.save_answer(user_id, count_, client_input)
-
-                                if Session.complete_sm_slotting(user_id):
-                                    message = f"Your request for Send Money task has been submitted,\n\nPlease wait for Mpesa prompt on +{user_id}\n\nThen enter your Mpesa PIN\n\nThank you 😊"
-                                    Session.load_handler(user_id, 'st_handler', 'ST', 0, 1)
-                                    Session.clear_answer_slot(user_id)
-
-                                    print(f"user number is : {user_id}")
-                                    tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
-
-                                else:
-                                    quiz_pack = Menu.load_question_pack(menu_code)
-                                    quiz = Session.return_current_slot_quiz(user_id, quiz_pack)
-                                    Session.step_slotting(user_id, quiz_pack)
-                                    tele_bot.send_message(update.message.chat.id, quiz, clear_prev_markup())
-
-                            else:
-                                print(f"{client_input}, is invalid")
-                                message = "Error\n\nThat input was invalid"
-                                tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
-
-                        elif count_ == 2:
-                            print(f"count is 2")
-                            if is_valid_payment_amount(client_input):
-                                print(f"valid payment number : {client_input}")
-                                Session.save_answer(user_id, count_, client_input)
-                                if Session.complete_sm_slotting(user_id):
-                                    message = f"Your request for Send Money task has been submitted,\n\nPlease wait for Mpesa prompt on +{user_id}\n\nThen enter your Mpesa PIN\n\nThank you 😊"
-                                    Session.load_handler(user_id, 'st_handler', 'ST', 0, 1)
-
-                                    print(f"user number is : {user_id}")
-                                    end_number = Session.load_ans_payload(user_id)
-                                    end_number = json.loads(end_number)
-                                    print(f"end_number_list : {end_number}")
-                                    print(f"end_number to set : {end_number[0]}, of type : {type(end_number[0])}")
-                                    Session.clear_answer_slot(user_id)
-                                    # send_user_stk(user_id, int(client_input), 'SM', end_number[0])
-                                    send_user_stk('254703103960', int(client_input), 'SM', end_number[0])
-
-                                    tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
-                                else:
-                                    quiz_pack = Menu.load_question_pack(menu_code)
-                                    quiz = Session.return_current_slot_quiz(user_id, quiz_pack)
-                                    Session.step_slotting(user_id, quiz_pack)
-                                    tele_bot.send_message(update.message.chat.id, quiz, clear_prev_markup())
-                            else:
-                                print(f"{client_input}, is invalid")
-                                message = "Error\n\nThat input was invalid"
-                                tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
-
-                 
-                     
+                        print(f"yup user is slot_filling")
+                        return 'ok'
             else:
                 print(f"is user first time, creating session")
                 new_count = 0
-                new_user_session = Session(uid=generate_uid(),
+
+                if client_input:
+                    print(f"starting to process /start\n\n")
+                    new_user_session = Session(uid=generate_uid(),
                                            waid=user_id,
                                            name=user_name,
                                            current_menu_code='ST',
@@ -270,38 +342,33 @@ def webhook():
                                            current_slot_count=0,
                                            slot_quiz_count=len(Menu.load_question_pack('ST')),
                                            current_slot_handler='st_handler')
-                new_user_session.save()
+                    new_user_session.save()
 
-                AccountSummary.add_summary(user_id)
+                    AccountSummary.add_summary(user_id)
+                    current_count = Session.get_browsing_count(user_id)
 
-                current_count = Session.get_browsing_count(user_id)
+                    menu_payload = main_menu_listing[current_count]
+                    print(f"current menu payload : {menu_payload}")
 
-                menu_payload = main_menu_listing[current_count]
-                print(f"current menu payload : {menu_payload}\n\n")
+                    menu_message = menu_payload['menu_message']
+                    menu_code = menu_payload['menu_code']
 
-                menu_message = menu_payload['menu_message']
-                menu_code = menu_payload['menu_code']
-
-                if menu_code == "ACC":
-                    print(f"appending account 2 menu_message")
-
-                    acc_summary = get_user_acc_summary_stmt(user_id, user_name)
-                    new_message = f"{acc_summary}\n\n{menu_message}"
-                    print(f"printing menu message : {menu_message}")
-                    
-                    # Send the message with buttons and media
                     tele_bot.send_chat_action(update.message.chat.id, 'typing')
                     sticker_file_id = menu_payload['menu_sticker']
                     image_link = menu_payload['media'][0]
 
                     tele_bot.send_sticker(update.message.chat.id, sticker_file_id)
                     tele_bot.send_photo(update.message.chat.id, image_link)
-                    tele_bot.send_message(user_id, f"{menu_message}", main_markup())
-                                        
-        return ''
-    
+                    tele_bot.send_message(user_id, menu_message, reply_markup=main_markup())
+
+                    return 'ok' 
+                else:
+                    return 'ok' 
+                
+                
     else:
         return 'Invalid request', 403
+
 
 
 
@@ -453,6 +520,6 @@ def process_if_up():
 if __name__ == '__main__':
     with app.app_context():
         # time.sleep(0.5)
-        tele_bot.set_webhook(url="https://spendvest-bot.onrender.com/telegram")
+        tele_bot.set_webhook(url="https://8489-102-217-172-2.ngrok-free.app/telegram")
 
     app.run(debug=True, port=1000)
