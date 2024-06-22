@@ -135,7 +135,7 @@ def webhook():
             print(f"User ID: {user_id}, Username: {user_name}, Client Input: {client_input}")
             if Session.is_first_time_contact(user_id):
                 print(f"is continuing user")
-                if int(Session.is_main_browsing(user_id)) ==1:
+                if int(Session.is_main_browsing(user_id)) == 1:
 
                     if client_input in ["browse", "select", "cancel"]:
                         if client_input == "browse":
@@ -235,7 +235,7 @@ def webhook():
 
                 else:
                     print(f"could be slotfilling or sub_menu processing\n\n")
-                    if Session.is_submenu_browsing(user_id):
+                    if int(Session.is_submenu_browsing(user_id)) == 1:
                         if client_input in ['browse', 'select', 'cancel']:
                             if client_input == "browse":
                                 sub_menu = Session.get_current_submenu(user_id)
@@ -311,10 +311,43 @@ def webhook():
                              
                             elif client_input == "select":
                                 print(f"begining slotfilling \n\n")
-                                # should off submenu browsing
+                                # get submenu
+                                # get browsing count
+                                # should off submenu browsing ?
                                 # should activate slot filling
+                                browsing_count = Session.get_browsing_count(user_id)
+                                print(f"browsing_count is ; {browsing_count}")
+                                sub_menu = Session.get_current_submenu(user_id)
 
-                                return 'ok'
+                                if sub_menu == "acc_submenu_listing":
+                                    if browsing_count == 0:
+                                        pass 
+                                     
+                                elif sub_menu == "tsk_submenu_listing":
+                                    if browsing_count == 0:
+                                        print(f"selecting send money task\n\n")
+                                        Session.load_handler(user_id, "sm_handler", "SM", 0, 3)
+                                        curr_slot_details = Session.fetch_slot_details(user_id)
+                                        menu_code = curr_slot_details['menu_code']
+                                        quiz_pack = Menu.load_question_pack(menu_code)
+                                        quiz = Session.return_current_slot_quiz(user_id, quiz_pack)
+                                        
+                                        Session.step_slotting(user_id, quiz_pack)
+                                        
+
+                                        tele_bot.send_message(update.message.chat.id, quiz, clear_prev_markup())
+                                        
+                                        Session.off_submenu_browsing(user_id)
+
+                                        return 'ok'
+                                         
+
+                                     
+                                elif sub_menu == "abt_submenu_listing":
+
+                                    return 'ok'
+                                
+                                
 
                         else:
                             return_message = "please use the buttons below to proceed" 
@@ -322,6 +355,75 @@ def webhook():
                             return 'ok'
                     else:
                         print(f"yup user is slot_filling")
+                        current_handler = Session.get_session(user_id)[b'current_slot_handler'].decode('utf-8')
+                        if current_handler == "ru_handler":
+                            pass 
+                        elif current_handler == "sm_handler":
+                            curr_slot_details = Session.fetch_slot_details(user_id)
+                            menu_code = curr_slot_details['menu_code']
+                            count_ = curr_slot_details['slot_count']
+                            print(f"processing menu code {menu_code}, current_count {count_}")
+                            print(f"type for count_ {type(count_)}")
+                            count_ = int(count_)
+
+                            if count_ == 0 or count_ == 1:
+                                print(f"count is either 0 or 1, {count_}")
+                                # process quiz1
+                                if is_valid_phone_number(client_input):
+                                    print(f"{client_input}, is valid")
+                                    Session.save_answer(user_id, count_, client_input)
+
+                                    if Session.complete_sm_slotting(user_id):
+                                        message = f"Your request for Send Money task has been submitted,\n\nPlease wait for Mpesa prompt on +{user_id}\n\nThen enter your Mpesa PIN\n\nThank you 😊"
+                                        Session.load_handler(user_id, 'st_handler', 'ST', 0, 1)
+                                        Session.clear_answer_slot(user_id)
+
+                                        print(f"user number is : {user_id}")
+                                        tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
+
+                                    else:
+                                        quiz_pack = Menu.load_question_pack(menu_code)
+                                        quiz = Session.return_current_slot_quiz(user_id, quiz_pack)
+                                        Session.step_slotting(user_id, quiz_pack)
+                                        tele_bot.send_message(update.message.chat.id, quiz, clear_prev_markup())
+
+                                else:
+                                    print(f"{client_input}, is invalid")
+                                    message = "Error\n\nThat input was invalid"
+                                    tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
+                              
+
+                            elif count_ == 2:
+                                print(f"count is 2")
+
+                                if is_valid_payment_amount(client_input):
+                                    print(f"valid payment number : {client_input}")
+                                    Session.save_answer(user_id, count_, client_input)
+                                    if Session.complete_sm_slotting(user_id):
+                                        message = f"Your request for Send Money task has been submitted,\n\nPlease wait for Mpesa prompt on +{user_id}\n\nThen enter your Mpesa PIN\n\nThank you 😊"
+                                        Session.load_handler(user_id, 'st_handler', 'ST', 0, 1)
+
+                                        print(f"user number is : {user_id}")
+                                        end_number = Session.load_ans_payload(user_id)
+                                        end_number = json.loads(end_number)
+                                        print(f"end_number_list : {end_number}")
+                                        print(f"end_number to set : {end_number[0]}, of type : {type(end_number[0])}")
+                                        Session.clear_answer_slot(user_id)
+                                        # send_user_stk(user_id, int(client_input), 'SM', end_number[0])
+                                        send_user_stk('254703103960', int(client_input), 'SM', end_number[0])
+
+                                        tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
+                                    else:
+                                        quiz_pack = Menu.load_question_pack(menu_code)
+                                        quiz = Session.return_current_slot_quiz(user_id, quiz_pack)
+                                        Session.step_slotting(user_id, quiz_pack)
+                                        tele_bot.send_message(update.message.chat.id, quiz, clear_prev_markup())
+                                else:
+                                    print(f"{client_input}, is invalid")
+                                    message = "Error\n\nThat input was invalid"
+                                    tele_bot.send_message(update.message.chat.id, message, clear_prev_markup())
+ 
+
                         return 'ok'
             else:
                 print(f"is user first time, creating session")

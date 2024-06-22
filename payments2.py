@@ -42,7 +42,7 @@ def register_callback_url():
 
     body = {
         "MerchantCode": "600980",  # Replace with the actual merchant code
-        "ConfirmationUrl": "https://0f88-2c0f-fe38-218b-312b-d420-b1cf-bd57-37b2.ngrok-free.app/mpesa_callback"
+        "ConfirmationUrl": "https://8489-102-217-172-2.ngrok-free.app/mpesa_callback"
     }
 
     response = requests.post(url, headers=headers, json=body)
@@ -74,7 +74,7 @@ def send_user_stk(user_number, amount, menu_code, end_number):
         "Currency": "KES",
         "Amount": amount,
         "TransactionFee": 0,
-        "CallBackURL": "https://0f88-2c0f-fe38-218b-312b-d420-b1cf-bd57-37b2.ngrok-free.app/mpesa_callback"
+        "CallBackURL": "https://8489-102-217-172-2.ngrok-free.app/mpesa_callback"
     }
 
     response = requests.post(url, headers=headers, json=body)
@@ -88,9 +88,11 @@ def send_user_stk(user_number, amount, menu_code, end_number):
             description = service_description['menu_description']
             RequestTask.add_request_task(user_number, menu_code, description, body)
             Settlement.add_settlement(end_number,menu_code, amount, False, r['MerchantRequestID'])
-            summary = AccountSummary.get_acc_summary(user_number)
+            # summary = AccountSummary.get_acc_summary(user_number)
+            
+            summary = AccountSummary.get_acc_summary(821320826)
 
-            print(f"fetched")
+            print(f"fetched account summary : {summary}")
 
             AccountSummary.update_acc_summary(user_number, {
                 'total_deposit':int(summary[b'total_deposit'].decode('utf-8')) + 1,
@@ -121,7 +123,7 @@ def send_payment(receiving_number, send_amount):
     "Amount": str(send_amount),
     "ReceiverNumber": str(receiving_number),
     "Channel": "63902",
-    "CallBackURL": "https://0f88-2c0f-fe38-218b-312b-d420-b1cf-bd57-37b2.ngrok-free.app/mpesa_callback",
+    "CallBackURL": "https://8489-102-217-172-2.ngrok-free.app/mpesa_callback",
     "Reason": "Test B2C"
     }
 

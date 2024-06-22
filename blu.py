@@ -110,7 +110,7 @@ class Session():
     @staticmethod
     def is_submenu_browsing(waid):
         key = f"session:{waid}"
-        return redis_client.hget(key,"main_menu_browsing").decode('utf-8')
+        return redis_client.hget(key,"sub_menu_browsing").decode('utf-8')
 
     @staticmethod
     def on_submenu_browsing(waid):
@@ -238,8 +238,6 @@ class Session():
                                                       "current_slot_count":current_slot_count,
                                                       "slot_quiz_count":quiz_count})
     
-
-
 
     @staticmethod
     def fetch_slot_details(waid):
