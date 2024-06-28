@@ -476,16 +476,26 @@ def wapp_webhook():
 
 
 
-@app.route('/whatsapp_webhook', methods=['GET', 'POST'])
+VERIFY_TOKEN = os.getenv('whatsapp_verify_token')
+
+@app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     if request.method == 'GET':
-        # Verification logic
-        return "Webhook verification successful", 200
+        token_sent = request.args.get('hub.verify_token')
+        challenge = request.args.get('hub.challenge')
+        return verify_token(token_sent, challenge)
     elif request.method == 'POST':
         # Handle incoming messages
         data = request.get_json()
         # Process the incoming data
         return "Message received", 200
+
+def verify_token(token_sent, challenge):
+    if token_sent == VERIFY_TOKEN:
+        return challenge
+    else:
+        return "Invalid verification token", 403
+    
     
 
 def get_user_acc_summary_stmt(waid, user_name):
