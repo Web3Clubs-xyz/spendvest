@@ -99,6 +99,7 @@ abt_submenu_listing = [{
 }]
 
 
+
 @tele_bot.message_handler(content_types=['sticker'])
 def handle_sticker(message):
     # Retrieve the sticker file ID
@@ -474,6 +475,11 @@ def webhook():
 
 
 
+@app.route('/whatsapp', methods=['POST'])
+def wapp_webhook():
+    print(request)
+    return 'ok'
+
 def get_user_acc_summary_stmt(waid, user_name):
     acc_dict = AccountSummary.get_acc_summary(waid)
     if acc_dict:
@@ -622,6 +628,6 @@ def process_if_up():
 if __name__ == '__main__':
     with app.app_context():
         # time.sleep(0.5)
-        tele_bot.set_webhook(url="https://8489-102-217-172-2.ngrok-free.app/telegram")
+        tele_bot.set_webhook(url="https://3f7c-102-217-172-2.ngrok-free.app/telegram")
 
     app.run(debug=True, port=1000)

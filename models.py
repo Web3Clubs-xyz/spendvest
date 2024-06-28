@@ -123,7 +123,7 @@ class AccountSummary:
 
 class RequestTask:
     @staticmethod
-    def add_request_task(client_waid, menu_code,service_description, service_payload):
+    def add_request_task(client_waid, menu_code, service_description, service_payload):
         uid = str(uuid.uuid4())
         current_time = time.time()
         ref = service_payload['AccountReference']
