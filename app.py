@@ -119,7 +119,7 @@ def handle_sticker(message):
 
 
 @app.route('/telegram', methods=['POST'])
-def wapp_webhook():
+def tele_webhook():
     if request.headers.get('content-type') == 'application/json':
         json_string = request.get_data().decode('utf-8')
         update = telebot.types.Update.de_json(json_string)
@@ -479,7 +479,7 @@ def wapp_webhook():
 VERIFY_TOKEN = os.getenv('whatsapp_verify_token')
 
 @app.route('/webhook', methods=['GET', 'POST'])
-def webhook():
+def wapp_webhook():
     if request.method == 'GET':
         token_sent = request.args.get('hub.verify_token')
         challenge = request.args.get('hub.challenge')
