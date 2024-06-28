@@ -13,6 +13,7 @@ import uuid
 from Markup import clear_prev_markup, main_markup
 import re 
 import json
+import requests
 
 
 # Load environment variables from .env file
@@ -474,29 +475,65 @@ def tele_webhook():
 
 
 
+WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN', "123456")
+GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN', "EAAUCpth1wAIBOwSjahZBybIoVOzcR97IOXRYWNpErmislpMWXvMdIHHTofe4s2zB8huYGWZCU5ZASWPdZBKQIrpRzzt524H0S3RpgaCUZB7ioNbGXRNu0muwzVX6UhM1QnRnlM0XmERkPc51pEwA7smsR5lTqHVinQEjWg2aBtOyXRZAD7uDG6zPPRvLxTlZCw6CtocxalCTyi1kIv0xKViRAR4CGIZD")
+PORT = int(os.getenv('PORT', 1000))
 
 
-VERIFY_TOKEN = os.getenv('whatsapp_verify_token')
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    data = request.get_json()
+    print("Incoming webhook message:", data)
 
-@app.route('/webhook', methods=['GET', 'POST'])
-def wapp_webhook():
-    if request.method == 'GET':
-        token_sent = request.args.get('hub.verify_token')
-        challenge = request.args.get('hub.challenge')
-        return verify_token(token_sent, challenge)
-    elif request.method == 'POST':
-        # Handle incoming messages
-        data = request.get_json()
-        # Process the incoming data
-        return "Message received", 200
+    message = data.get('entry', [])[0].get('changes', [])[0].get('value', {}).get('messages', [])[0]
 
-def verify_token(token_sent, challenge):
-    if token_sent == VERIFY_TOKEN:
-        return challenge
+    if message and message.get('type') == 'text':
+        business_phone_number_id = data.get('entry', [])[0].get('changes', [])[0].get('value', {}).get('metadata', {}).get('phone_number_id')
+        response_message = {
+            "messaging_product": "whatsapp",
+            "to": message.get('from'),
+            "text": {"body": "Echo: " + message.get('text', {}).get('body')},
+            "context": {
+                "message_id": message.get('id')
+            }
+        }
+
+        headers = {
+            "Authorization": f"Bearer {GRAPH_API_TOKEN}"
+        }
+
+        # Send reply message
+        response = requests.post(
+            f"https://graph.facebook.com/v18.0/{business_phone_number_id}/messages",
+            json=response_message,
+            headers=headers
+        )
+
+        # Mark incoming message as read
+        mark_read_payload = {
+            "messaging_product": "whatsapp",
+            "status": "read",
+            "message_id": message.get('id')
+        }
+        response = requests.post(
+            f"https://graph.facebook.com/v18.0/{business_phone_number_id}/messages",
+            json=mark_read_payload,
+            headers=headers
+        )
+
+    return '', 200
+
+@app.route('/webhook', methods=['GET'])
+def verify_webhook():
+    mode = request.args.get('hub.mode')
+    token = request.args.get('hub.verify_token')
+    challenge = request.args.get('hub.challenge')
+
+    if mode == 'subscribe' and token == WEBHOOK_VERIFY_TOKEN:
+        print("Webhook verified successfully!")
+        return challenge, 200
     else:
-        return "Invalid verification token", 403
-    
-    
+        return '', 403
 
 def get_user_acc_summary_stmt(waid, user_name):
     acc_dict = AccountSummary.get_acc_summary(waid)
@@ -646,6 +683,7 @@ def process_if_up():
 if __name__ == '__main__':
     with app.app_context():
         # time.sleep(0.5)
-        tele_bot.set_webhook(url="https://3f7c-102-217-172-2.ngrok-free.app/telegram")
+        tele_bot.set_webhook(url="https://22da-102-217-172-2.ngrok-free.app/telegram")
 
     app.run(debug=True, port=1000)
+    
