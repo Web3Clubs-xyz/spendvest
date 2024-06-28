@@ -475,10 +475,18 @@ def webhook():
 
 
 
-@app.route('/whatsapp', methods=['POST'])
-def wapp_webhook():
-    print(request)
-    return 'ok'
+
+@app.route('/whatsapp_webhook', methods=['GET', 'POST'])
+def webhook():
+    if request.method == 'GET':
+        # Verification logic
+        return "Webhook verification successful", 200
+    elif request.method == 'POST':
+        # Handle incoming messages
+        data = request.get_json()
+        # Process the incoming data
+        return "Message received", 200
+    
 
 def get_user_acc_summary_stmt(waid, user_name):
     acc_dict = AccountSummary.get_acc_summary(waid)
