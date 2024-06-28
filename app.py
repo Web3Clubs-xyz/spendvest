@@ -119,7 +119,7 @@ def handle_sticker(message):
 
 
 @app.route('/telegram', methods=['POST'])
-def webhook():
+def wapp_webhook():
     if request.headers.get('content-type') == 'application/json':
         json_string = request.get_data().decode('utf-8')
         update = telebot.types.Update.de_json(json_string)
