@@ -15,35 +15,38 @@ class Session():
             uid,
             waid,
             name,
-            user_flow,
 
-            main_menu_browsing,
-            sub_menu_browsing,
-            browsing_count,
-
-            current_menu_code=None,
-            answer_payload=None,
-            is_slot_filling=False,
-            current_slot_count=0,
-            slot_quiz_count=0,
-            current_slot_handler=None
+            main_menu_nav,
+            main_menu_select,
+            sub1_menu_nav,
+            sub1_menu_select,
+            sub2_menu_nav,
+            sub2_menu_select,
+            
+            
+            is_slot_filling,
+            answer_payload,
+            current_slot_count,
+            slot_quiz_count,
+            current_slot_handler
     ):
         self.uid = uid
         self.waid = waid
         self.name = name
-        self.current_menu_code = current_menu_code
-        self.answer_payload = answer_payload if answer_payload is not None else []
-        self.slot_filling = is_slot_filling
-        self.user_flow = user_flow
-        
-        self.main_menu_browsing = main_menu_browsing
-        self.sub_menu_browsing =  sub_menu_browsing
-        self.sub_menu = ''
-        self.browsing_count = browsing_count
 
+        self.main_menu_nav = main_menu_nav
+        self.main_menu_select = main_menu_select
+        self.sub1_menu_nav = sub1_menu_nav
+        self.sub1_menu_select = sub1_menu_select
+        self.sub2_menu_nav = sub2_menu_nav
+        self.sub2_menu_select = sub2_menu_select
+
+        self.slot_filling = is_slot_filling
+        self.answer_payload = answer_payload if answer_payload is not None else []
         self.current_slot_count = current_slot_count
         self.slot_quiz_count = slot_quiz_count
         self.current_slot_handler = current_slot_handler
+
         self.created_at = time.time()
         self.updated_at = time.time()
     
@@ -52,24 +55,28 @@ class Session():
             'uid': self.uid,
             'waid': self.waid,
             'name': self.name,
-            'current_menu_code': self.current_menu_code,
-            'answer_payload': self.answer_payload,  # Serialize the list
+            
+            'main_menu_nav':self.main_menu_nav,
+            'main_menu_select':self.main_menu_select,
+            'sub1_menu_nav':self.sub1_menu_nav,
+            'sub1_menu_select':self.sub1_menu_select,
+            'sub2_menu_nav':self.sub2_menu_nav,
+            'sub2_menu_select':self.sub2_menu_select,
+            
             'slot_filling': self.slot_filling,  # Serialize the boolean
-            'user_flow': self.user_flow,
-
-            'main_menu_browsing':self.main_menu_browsing,
-            'sub_menu_browsing':self.sub_menu_browsing,
-            'sub_menu':self.sub_menu,
-            'browsing_count':self.browsing_count,
-
+            'answer_payload': self.answer_payload,  # Serialize the list      
             'current_slot_count': self.current_slot_count,
             'slot_quiz_count': self.slot_quiz_count,
             'current_slot_handler': self.current_slot_handler,
-            'created_at': self.created_at,
+            
+            'created_at': time.time(),
             'updated_at': time.time()
         }
+
+        for key, value in session_data.items():
+            redis_client.hset(f"session:{self.waid}", key, value)
         redis_client.sadd("user:set", self.waid)
-        redis_client.hmset(f"session:{self.waid}", session_data)
+        
     
     @staticmethod
     def get_session(waid):
@@ -91,132 +98,77 @@ class Session():
         self.updated_at = time.time()
         self.save()
 
-    # utility functions
-    @staticmethod
-    def is_main_browsing(waid):
-        key = f"session:{waid}"
-        return redis_client.hget(key,"main_menu_browsing").decode('utf-8')
-    
-    @staticmethod
-    def off_main_browsing(waid):
-        key = f"session:{waid}"
-        return redis_client.hset(key, "main_menu_browsing", 0)
-    
-    @staticmethod
-    def on_main_browsing(waid):
-        key = f"session:{waid}"
-        return redis_client.hset(key, "main_menu_browsing", 1)
-
-    @staticmethod
-    def is_submenu_browsing(waid):
-        key = f"session:{waid}"
-        return redis_client.hget(key,"sub_menu_browsing").decode('utf-8')
-
-    @staticmethod
-    def on_submenu_browsing(waid):
-        key = f"session:{waid}"
-        return redis_client.hset(key, "sub_menu_browsing", 1) 
-
-    @staticmethod
-    def off_submenu_browsing(waid):
-        key = f"session:{waid}"
-        redis_client.hset(key, 'sub_menu', '')
-        return redis_client.hset(key, "sub_menu_browsing", 0) 
-
-    @staticmethod
-    def load_submenu(waid, submenu):
-        key = f"session:{waid}"
-        return redis_client.hset(key, 'sub_menu', submenu)
-    
-    @staticmethod
-    def get_current_submenu(waid):
-        key = f"session:{waid}"
-        return redis_client.hget(key, "sub_menu").decode('utf-8')
-    
     @staticmethod
     def is_first_time_contact(waid):
         return redis_client.sismember('user:set', waid)
     
+
     @staticmethod
-    def get_browsing_count(waid):
-        key = f"session:{waid}"
-        current_count = redis_client.hget(key, "browsing_count").decode('utf-8')
-        current_count = int(current_count)
-        return current_count
+    def on_main_menu_nav(waid,select):
+        key=f"session:{waid}"
+        redis_client.hmset(key, {'main_menu_nav':1, 'main_menu_select':select})
+         
+    @staticmethod
+    def get_main_menu_select(waid):
+        key=f"session:{waid}"
+        return redis_client.hget(key, "main_menu_select")
+
+    @staticmethod
+    def off_main_menu_nav(waid):
+        key=f"session:{waid}"
+        return redis_client.hset(key, 'main_menu_nav',0)
     
     @staticmethod
-    def browse_main(waid):
-        menu_listing_count = 3
-
-        key = f"session:{waid}"
-        current_count = redis_client.hget(key, "browsing_count").decode('utf-8')
-        current_count = int(current_count)
-
-        if current_count < menu_listing_count:
-            print(f"increamenting browsing_count")
-            new_count = current_count + 1
-        else:
-            print(f"reseting browsing_count")
-            new_count = 0 
-        
-        return redis_client.hset(key,"browsing_count", new_count)
-
-    @staticmethod
-    def browse_submain(waid):
-        curr_submenu = Session.get_current_submenu(waid)
-
-        if curr_submenu == "acc_submenu_listing":
-            list_length = 3
-            key = f"session:{waid}"
-            current_count = redis_client.hget(key, "browsing_count").decode('utf-8')
-            current_count = int(current_count)
-
-            if current_count < list_length:
-                print(f"increamenting browsing_count acc_submenu_listing")
-                new_count = current_count + 1
-            else:
-                print(f"reseting browsing_count")
-                new_count = 0 
-        
-            return redis_client.hset(key,"browsing_count", new_count)
- 
-        elif curr_submenu == "tsk_submenu_listing":
-            list_length = 1
-            key = f"session:{waid}"
-            current_count = redis_client.hget(key, "browsing_count").decode('utf-8')
-            current_count = int(current_count)
-
-            if current_count < list_length:
-                print(f"increamenting browsing_count tsk_submenu_listing")
-                new_count = current_count + 1
-            else:
-                print(f"reseting browsing_count")
-                new_count = 0 
-        
-            return redis_client.hset(key,"browsing_count", new_count)
-              
-        elif curr_submenu == "abt_submenu_listing":
-            list_length = 1
-            key = f"session:{waid}"
-            current_count = redis_client.hget(key, "browsing_count").decode('utf-8')
-            current_count = int(current_count)
-
-            if current_count < list_length:
-                print(f"increamenting browsing_count abt_submenu_listing")
-                new_count = current_count + 1
-            else:
-                print(f"reseting browsing_count")
-                new_count = 0 
-        
-            return redis_client.hset(key,"browsing_count", new_count) 
+    def is_main_menu_nav(waid):
+        key=f"session:{waid}"
+        return redis_client.hget(key,"main_menu_nav").decode('utf-8')
          
 
     @staticmethod
-    def reset_browsing_count(waid):
-        new_count = 0
-        key = f"session:{waid}"
-        return redis_client.hset(key, "browsing_count", new_count)
-        
+    def on_sub1_menu_nav(waid, select):
+        key=f"session:{waid}"
+        return redis_client.hmset(key, {'sub1_menu_nav':1, 'sub1_menu_select':select}) 
+
+    @staticmethod
+    def get_sub1_menu_select(waid):
+        key=f"session:{waid}"
+        return redis_client.hget(key, "sub1_menu_select").decode('utf-8')
+
+    @staticmethod
+    def off_sub1_menu_nav(waid):
+        key=f"session:{waid}"
+        return redis_client.hset(key, 'sub1_menu_nav',0) 
+
+    @staticmethod
+    def is_sub1_menu_nav(waid):
+        key=f"session:{waid}"
+        return redis_client.hget(key,"sub1_menu_nav").decode('utf-8')
+    
+
+    @staticmethod
+    def on_sub2_menu_nav(waid, select):
+        key=f"session:{waid}"
+        return redis_client.hmset(key, {'sub2_menu_nav':1, 'sub2_menu_select':select})  
+    
+    @staticmethod
+    def get_sub2_menu_select(waid):
+        key=f"session:{waid}"
+        return redis_client.hget(key, "sub2_menu_select").decode('utf-8')
+    
+    @staticmethod
+    def off_sub2_menu_nav(waid):
+        key=f"session:{waid}"
+        return redis_client.hset(key, 'sub2_menu_nav', 0) 
+
+    @staticmethod
+    def is_sub2_menu_nav(waid):
+        key=f"session:{waid}"
+        return redis_client.hget(key,"sub2_menu_nav").decode('utf-8')
+
+
+
+
+
     @staticmethod
     def is_slot_filling(waid):
         user_session = Session.get_session(waid)
@@ -270,9 +222,7 @@ class Session():
         elif count_ < quiz_index_length:
             count_ += 1
             redis_client.hset(f"session:{waid}", "current_slot_count", count_)
-        
          
-    
     @staticmethod
     def load_ans_payload(waid):
         ans_payload = redis_client.hget(f"session:{waid}", "answer_payload")
@@ -339,8 +289,6 @@ class Session():
             return False 
 
          
-
-
     @staticmethod
     def complete_sm_slotting(waid):
         print(f"calling complete send_money function")
