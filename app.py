@@ -9,12 +9,13 @@ import random
 
 from blu import Session 
 from models import SlotQuestion, AccountSummary, MpesaCustomer
+import re
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Retrieve environment variables
-GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN', "EAAUCpth1wAIBOZB1214ABxh5Q8MwqH0K5wazqYrkJxKRoWdpdJCswYYOHyDMsgSdQfnUqCbz3NhS0h3C9aIQdLz8YTkJ6Agc3B5DWpUH8ZCmhNcnHTPFProjZClPXZCdq6ChUNeQO7bkFa0b2VvQ3baRd2cZBmjH6cp1mlcnb6IlyEjVJlQpWY1yu1aZA7aMClvi7y7LtopfbTcipRNQZB3d9nxwrAZD")
+GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN', "EAAUCpth1wAIBO8i1GmGZAElpMJZCCktMlWCluXT7eStoGO2Y9bouTyZCOuwZBieBgItlTnomMPl1tplmLaj9vjbkT1fKHaaowL7wjtghJza1TjnsYGAHbdY8HoVT50gTKjUlSLry8NCltchuk45YaSb1BLZBgCjzEZCXKfsRk6XwjbfMWtlVupqLZBjuZBEOPONnRPyMPxZBLbf2CqcaiUZCswQtNZAkWEZD")
 WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN', "123456")
 PORT = int(os.getenv('PORT', 1000))
 WHATSAPP_API_URL = 'https://graph.facebook.com/v18.0'
@@ -145,7 +146,67 @@ async def webhook():
                 pass
             else:
                 print("User could be slot filling")
-                pass
+                print(f"user selected : {user_message}")
+                #
+                slot_details = Session.fetch_slot_details(user_waid)
+                print(f"fetched slot details, {slot_details}")
+                handler = slot_details['slot_handler']
+                current_count_ = slot_details['slot_count']
+                
+                if  handler == "ru_handler":
+                    
+                    if current_count_ == '0': 
+                        print(f"processing {handler}, with count {current_count_}")
+                        user_input = user_message
+                        if verify_is_yes(user_input):
+                            # record
+                            Session.save_reg_answer(user_waid,current_count_, user_input)
+                            # update counter
+                            # get question pack
+                            quiz_pack = SlotQuestion.get_question_pack('RU')
+                            print(f"fetched quiz_pack, {quiz_pack}")
+                            # get first quiz
+                            quiz = quiz_pack[str(int(current_count_) + 1)]
+                            # ++ slotfilling
+                            Session.step_slotting(user_waid, quiz_pack)
+                            # send quiz
+                            await send_slot_quiz_interactive_template(business_phone_number_id,user_waid,quiz,message_id)
+                             
+                        else:
+                            error_message = "Please enter answer as instructed"
+                            await send_slot_quiz_interactive_template(business_phone_number_id, user_waid, error_message, message_id)
+                        
+                    if current_count_ == '1': 
+                        print(f"processing {handler}, with count {current_count_}")
+                        user_input = user_message
+                        if verify_is_yes(user_input):
+                            # record
+                            Session.save_reg_answer(user_waid,current_count_, user_input)
+                            # update counter
+                            # get question pack
+                            quiz_pack = SlotQuestion.get_question_pack('RU')
+                            print(f"fetched quiz_pack, {quiz_pack}")
+                            # get first quiz
+                            end_process_message = "Youre account has been succesfully registerd!"
+                            MpesaCustomer.add_mpesa_customer(user_waid, user_waid)
+                            Session.clear_answer_slot(user_waid)
+                            Session.off_slot_filling(user_waid)
+                            Session.on_main_menu_nav(user_waid, "main_menu_select_home")
+                            # ++ slotfilling
+                            # Session.step_slotting(user_waid, quiz_pack)
+                            # send quiz
+                            await send_slot_quiz_interactive_template(business_phone_number_id,user_waid,end_process_message,message_id)
+                             
+                        else:
+                            error_message = "Please enter answer as instructed"
+                            await send_slot_quiz_interactive_template(business_phone_number_id, user_waid, error_message, message_id)
+                            
+                    
+                    
+
+                
+
+                
         else:
             print("New user, first time contact, creating session")
             new_user_session = Session(
@@ -161,6 +222,7 @@ async def webhook():
                 is_slot_filling=0,
                 answer_payload='[]',
                 current_slot_count=0,
+                current_slot_code='',
                 slot_quiz_count=0,
                 current_slot_handler=''
             )
@@ -236,7 +298,37 @@ async def webhook():
                 await send_sub1menu_acc_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
         
         if button_reply['id'] =="sub2_menu_reg_proceed_button":
-            pass
+            print(f"About to start Reg Slotfilling")
+            # off sub2_main_nav
+            Session.off_sub2_menu_nav(user_waid)
+            # on slotfilling with the slot_handler,slot_code
+            Session.set_slot_filling_on(user_waid)
+            Session.load_handler(user_waid, 'ru_handler', "RU",0,2)
+             
+            # get first question
+            slot_details = Session.fetch_slot_details(user_waid)
+            print(f"fetched slot details, {slot_details}")
+            # get question pack
+            quiz_pack = SlotQuestion.get_question_pack('RU')
+            print(f"fetched quiz_pack, {quiz_pack}")
+            # get first quiz
+            quiz = quiz_pack[slot_details['slot_count']]
+            # ++ slotfilling
+            # Session.step_slotting(user_waid, quiz_pack)
+            # send quiz
+            await send_slot_quiz_interactive_template(business_phone_number_id,user_waid,quiz,message_id)
+
+        if button_reply['id'] =="slot_filling_cancel_button":
+            # set slotfilling off
+            Session.off_slot_filling(user_waid)
+            # clean answer payload
+            Session.clear_answer_slot(user_waid)
+            # return back to menu sub2_menu_select_reg
+            Session.off_sub1_menu_nav(user_waid)
+            Session.on_sub2_menu_nav(user_waid,"sub2_menu_select_register")
+            await send_sub2menu_register_interactive_template(business_phone_number_id,user_waid,user_message, message_id)
+        
+             
 
         if button_reply['id'] == "main_menu_spend_button":
             pass 
@@ -266,6 +358,9 @@ media_map = {
     'AboutMedia.png': '445867451661198'
     }
 
+def verify_is_yes(input):
+    pattern = re.compile(r'^yes$', re.IGNORECASE)
+    return bool(pattern.match(input))
 
 
 async def send_mainmenu_reg_interactive_template(reg_status, business_phone_number_id, to, message, reply_message_id):
@@ -533,6 +628,56 @@ async def send_sub1menu_spend_interactive_template():
 
 async def send_sub2menu_sendmoney_interactive_template():
     pass 
+
+async def send_slot_quiz_interactive_template(business_phone_number_id, to, message, reply_message_id):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GRAPH_API_TOKEN}"
+    }
+
+    button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "slot_filling_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+
+    data = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            # "header": {
+            #     "type": "image",
+            #     "image": {
+            #         "id": f"{media_map['AboutMedia.png']}"
+            #     }
+            # },
+            "body": {
+                "text": f"{message}"
+            },
+            "footer": {
+                "text": "To cancel choose an option below"
+            },
+            "action": {
+                "buttons": button_set
+            }
+        }
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{WHATSAPP_API_URL}/{business_phone_number_id}/messages", headers=headers, json=data) as response:
+            if response.status == 200:
+                print("Message sent successfully")
+            else:
+                print(f"Failed to send message: {response.status}")
+                print(await response.text())
+
+     
 
 
 

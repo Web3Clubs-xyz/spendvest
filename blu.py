@@ -26,6 +26,7 @@ class Session():
             
             is_slot_filling,
             answer_payload,
+            current_slot_code,
             current_slot_count,
             slot_quiz_count,
             current_slot_handler
@@ -43,9 +44,11 @@ class Session():
 
         self.slot_filling = is_slot_filling
         self.answer_payload = answer_payload if answer_payload is not None else []
+        self.current_slot_code = current_slot_code
         self.current_slot_count = current_slot_count
         self.slot_quiz_count = slot_quiz_count
         self.current_slot_handler = current_slot_handler
+
 
         self.created_at = time.time()
         self.updated_at = time.time()
@@ -66,6 +69,7 @@ class Session():
             'slot_filling': self.slot_filling,  # Serialize the boolean
             'answer_payload': self.answer_payload,  # Serialize the list      
             'current_slot_count': self.current_slot_count,
+            'current_slot_code':self.current_slot_code,
             'slot_quiz_count': self.slot_quiz_count,
             'current_slot_handler': self.current_slot_handler,
             
@@ -184,9 +188,15 @@ class Session():
         return redis_client.hset(f"session:{waid}", "slot_filling", 1)
     
     @staticmethod
+    def off_slot_filling(waid):
+        key=f"session:{waid}"
+        return redis_client.hset(key, "slot_filling", 0)
+    
+
+    @staticmethod
     def load_handler(waid, handler, menu_code, current_slot_count, quiz_count):
         return redis_client.hmset(f"session:{waid}", {"current_slot_handler":handler, 
-                                                      "current_menu_code":menu_code, 
+                                                      "current_slot_code":menu_code, 
                                                       "current_slot_count":current_slot_count,
                                                       "slot_quiz_count":quiz_count})
     
@@ -196,9 +206,10 @@ class Session():
         user_session = Session.get_session(waid)
         
         return {
-            "menu_code":user_session[b'current_menu_code'].decode('utf-8'),
+            "slot_code":user_session[b'current_slot_code'].decode('utf-8'),
             "slot_count":user_session[b'current_slot_count'].decode('utf-8'),
-            "quiz_count":user_session[b'slot_quiz_count'].decode('utf-8')
+            "quiz_count":user_session[b'slot_quiz_count'].decode('utf-8'),
+            "slot_handler":user_session[b'current_slot_handler'].decode('utf-8')
         }
     
     @staticmethod
@@ -229,7 +240,7 @@ class Session():
         return ans_payload.decode('utf-8')
 
     @staticmethod
-    def save_answer(waid, curr_count_, ans):
+    def save_reg_answer(waid, curr_count_, ans):
         current_ans_payload = Session.load_ans_payload(waid)
         curr_count = int(curr_count_) - 1
         # new_entry = {curr_count: ans}
