@@ -111,7 +111,7 @@ class Session():
     @staticmethod
     def get_main_menu_select(waid):
         key=f"session:{waid}"
-        return redis_client.hget(key, "main_menu_select")
+        return redis_client.hget(key, "main_menu_select").decode('utf-8')
 
     @staticmethod
     def off_main_menu_nav(waid):

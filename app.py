@@ -117,6 +117,8 @@ async def webhook():
             if Session.is_main_menu_nav(user_waid) == '1':
                 print(f"User is in main menu navigation")
                 current_select = Session.get_main_menu_select(user_waid)
+                print(f"current_select : {current_select}, for input : {user_message}")
+
                 if current_select == "main_menu_select_home":
                     if MpesaCustomer.get_user_reg_status(user_waid):
                         print(f"Registered Mpesa user")
@@ -199,7 +201,43 @@ async def webhook():
                     await send_mainmenu_reg_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
 
         if button_reply['id'] == "main_menu_account_button":
-            pass 
+            Session.off_main_menu_nav(user_waid)
+            Session.on_sub1_menu_nav(user_waid, "sub1_menu_select_acc")
+            if MpesaCustomer.get_user_reg_status(user_waid):
+                print(f"Registered Mpesa user")
+                await send_sub1menu_acc_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
+            else:
+                print(f"Unregisterd Mpesa user")
+                await send_sub1menu_acc_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
+        
+        if button_reply['id'] == "sub1_menu_acc_cancel_button":
+            Session.off_sub1_menu_nav(user_waid)
+            Session.on_main_menu_nav(user_waid,"main_menu_select_home")
+            if MpesaCustomer.get_user_reg_status(user_waid):
+                    print(f"Registered Mpesa user")
+                    await send_mainmenu_reg_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
+            else:
+                    print(f"Unregistered Mpesa user")
+                    await send_mainmenu_reg_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
+        
+        if button_reply['id'] == "sub1_menu_acc_reg_button":
+            Session.off_sub1_menu_nav(user_waid)
+            Session.on_sub2_menu_nav(user_waid,"sub2_menu_select_register")
+            await send_sub2menu_register_interactive_template(business_phone_number_id,user_waid,user_message, message_id)
+        
+        if button_reply['id'] == "sub2_menu_reg_cancel_button":
+            Session.off_sub2_menu_nav(user_waid)
+            Session.on_sub1_menu_nav(user_waid, "sub1_menu_select_acc")
+            if MpesaCustomer.get_user_reg_status(user_waid):
+                print(f"Registered Mpesa user")
+                await send_sub1menu_acc_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
+            else:
+                print(f"Unregisterd Mpesa user")
+                await send_sub1menu_acc_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
+        
+        if button_reply['id'] =="sub2_menu_reg_proceed_button":
+            pass
+
         if button_reply['id'] == "main_menu_spend_button":
             pass 
         
@@ -346,11 +384,142 @@ async def send_sub1menu_about_interactive_template(business_phone_number_id, to,
                 print(await response.text())
 
 
-async def send_sub1menu_acc_interactive_template():
-    pass 
+async def send_sub1menu_acc_interactive_template(reg_status,business_phone_number_id, to, message, reply_message_id):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GRAPH_API_TOKEN}"
+    }
 
-async def send_sub2menu_register_interactive_template():
-    pass 
+    button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub1_menu_acc_reg_button",
+                "title": "Register Mpesa"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub1_menu_acc_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+
+    if reg_status == True:
+        button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub1_menu_acc_save_button",
+                "title": "Save %"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub1_menu_acc_withdraw_button",
+                "title": "Withdraw To Mpesa"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub1_menu_acc_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+
+    data = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "header": {
+                "type": "image",
+                "image": {
+                    "id": f"{media_map['AccountMedia.png']}"
+                }
+            },
+            "body": {
+                "text": "Learn more about SpendVest and how it can help you save."
+            },
+            "footer": {
+                "text": "Choose an option below"
+            },
+            "action": {
+                "buttons": button_set
+            }
+        }
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{WHATSAPP_API_URL}/{business_phone_number_id}/messages", headers=headers, json=data) as response:
+            if response.status == 200:
+                print("Message sent successfully")
+            else:
+                print(f"Failed to send message: {response.status}")
+                print(await response.text())
+ 
+
+async def send_sub2menu_register_interactive_template(business_phone_number_id, to, message, reply_message_id):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GRAPH_API_TOKEN}"
+    }
+
+    button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub2_menu_reg_proceed_button",
+                "title": "Proceed"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub2_menu_reg_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+
+    data = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "header": {
+                "type": "image",
+                "image": {
+                    "id": f"{media_map['RegisterationMedia.png']}"
+                }
+            },
+            "body": {
+                "text": "Learn more about SpendVest and how it can help you save."
+            },
+            "footer": {
+                "text": "Choose an option below"
+            },
+            "action": {
+                "buttons": button_set
+            }
+        }
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{WHATSAPP_API_URL}/{business_phone_number_id}/messages", headers=headers, json=data) as response:
+            if response.status == 200:
+                print("Message sent successfully")
+            else:
+                print(f"Failed to send message: {response.status}")
+                print(await response.text())
+ 
 
 async def send_sub2menu_save_interactive_template():
     pass 
