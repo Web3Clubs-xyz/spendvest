@@ -42,7 +42,7 @@ def register_callback_url():
 
     body = {
         "MerchantCode": "600980",  # Replace with the actual merchant code
-        "ConfirmationUrl": "https://e5ba-102-217-172-2.ngrok-free.app/mpesa_callback"
+        "ConfirmationUrl": "https://spendvest-bot.onrender.com/mpesa_callback"
     }
 
     response = requests.post(url, headers=headers, json=body)
@@ -79,7 +79,7 @@ def send_user_stk(user_number, amount, slot_code, end_number):
         "Currency": "KES",
         "Amount": amount,
         "TransactionFee": 0,
-        "CallBackURL": "https://e5ba-102-217-172-2.ngrok-free.app/mpesa_callback"
+        "CallBackURL": "https://spendvest-bot.onrender.com/mpesa_callback"
     }
 
     
@@ -131,7 +131,7 @@ def send_payment(receiving_number, send_amount):
     "Amount": str(send_amount),
     "ReceiverNumber": str(receiving_number),
     "Channel": "63902",
-    "CallBackURL": "https://e5ba-102-217-172-2.ngrok-free.app/mpesa_callback",
+    "CallBackURL": "https://spendvest-bot.onrender.com/mpesa_callback",
     "Reason": "Test B2C"
     }
 
