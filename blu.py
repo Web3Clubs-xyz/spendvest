@@ -323,3 +323,7 @@ class Session():
             else:
                 print(f"answers not the same")
                 return False
+    
+    @staticmethod
+    def complete_sa_slotting(waid):
+        pass 

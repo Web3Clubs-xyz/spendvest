@@ -15,7 +15,7 @@ import re
 load_dotenv()
 
 # Retrieve environment variables
-GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN', "EAAUCpth1wAIBO8i1GmGZAElpMJZCCktMlWCluXT7eStoGO2Y9bouTyZCOuwZBieBgItlTnomMPl1tplmLaj9vjbkT1fKHaaowL7wjtghJza1TjnsYGAHbdY8HoVT50gTKjUlSLry8NCltchuk45YaSb1BLZBgCjzEZCXKfsRk6XwjbfMWtlVupqLZBjuZBEOPONnRPyMPxZBLbf2CqcaiUZCswQtNZAkWEZD")
+GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN', "EAAUCpth1wAIBOyVcW78wV0WvwM1ZBrWBRyyTAKtNgfSuwZC3a3hAc7UsUkpjQb8gE1YeZCYm3xIDC97gdBYpd7sZBoiHRIQIXQUP2SGk0c89ZAcGId9VoGZB2y2aQwvWowHOWl0s5ANNHcp7x4ZBQWyyZAPx2A2xKrr4pb1iwNFxrW60dgFYonhz7rD5gWZCXYZCWMgSvZASddHaCENlIkvwu2CSdt48ZCYZD")
 WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN', "123456")
 PORT = int(os.getenv('PORT', 1000))
 WHATSAPP_API_URL = 'https://graph.facebook.com/v18.0'
@@ -123,10 +123,10 @@ async def webhook():
                 if current_select == "main_menu_select_home":
                     if MpesaCustomer.get_user_reg_status(user_waid):
                         print(f"Registered Mpesa user")
-                        await send_mainmenu_reg_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
+                        await send_mainmenu_home_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
                     else:
                         print(f"Unregistered Mpesa user")
-                        await send_mainmenu_reg_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
+                        await send_mainmenu_home_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
 
                     
                 
@@ -170,11 +170,11 @@ async def webhook():
                             # ++ slotfilling
                             Session.step_slotting(user_waid, quiz_pack)
                             # send quiz
-                            await send_slot_quiz_interactive_template(business_phone_number_id,user_waid,quiz,message_id)
+                            await send_slot_quiz_interactive_template("ru_handler",business_phone_number_id,user_waid,quiz,message_id)
                              
                         else:
                             error_message = "Please enter answer as instructed"
-                            await send_slot_quiz_interactive_template(business_phone_number_id, user_waid, error_message, message_id)
+                            await send_slot_quiz_interactive_template("ru_handler",business_phone_number_id, user_waid, error_message, message_id)
                         
                     if current_count_ == '1': 
                         print(f"processing {handler}, with count {current_count_}")
@@ -188,19 +188,83 @@ async def webhook():
                             print(f"fetched quiz_pack, {quiz_pack}")
                             # get first quiz
                             end_process_message = "Youre account has been succesfully registerd!"
-                            MpesaCustomer.add_mpesa_customer(user_waid, user_waid)
-                            Session.clear_answer_slot(user_waid)
-                            Session.off_slot_filling(user_waid)
-                            Session.on_main_menu_nav(user_waid, "main_menu_select_home")
+                            try:
+                                MpesaCustomer.add_mpesa_customer(user_waid, user_waid)
+                                Session.complete_reg_slotting(user_waid)
+                                Session.clear_answer_slot(user_waid)
+                                Session.off_slot_filling(user_waid)
+                                Session.on_main_menu_nav(user_waid, "main_menu_select_home")
+                                # ++ slotfilling
+                                # Session.step_slotting(user_waid, quiz_pack)
+                                # send quiz
+                                await send_status_congrats_reg_interactive_template("ru_handler",business_phone_number_id,user_waid,end_process_message,message_id)
+
+                            except Exception as e:
+                                print(f"finish slot filling error, {e}")
+                                end_process_message = "There seems to be an error with your submission"
+                                await send_status_error_reg_interactive_template("ru_handler",business_phone_number_id,user_waid,end_process_message,message_id)
+                                  
+                        else:
+                            error_message = "Please enter answer as instructed"
+                            await send_slot_quiz_interactive_template("ru_handler",business_phone_number_id, user_waid, error_message, message_id)
+
+
+
+                if handler == "sa_handler":
+                    
+                    if current_count_ == '0': 
+                        print(f"processing {handler}, with count {current_count_}")
+                        user_input = user_message
+                        if verify_is_percentage(user_input):
+                            # record
+                            Session.save_reg_answer(user_waid,current_count_, user_input)
+                            # update counter
+                            # get question pack
+                            quiz_pack = SlotQuestion.get_question_pack('SA')
+                            print(f"fetched quiz_pack, {quiz_pack}")
+                            # get first quiz
+                            quiz = quiz_pack[str(int(current_count_) + 1)]
                             # ++ slotfilling
-                            # Session.step_slotting(user_waid, quiz_pack)
+                            Session.step_slotting(user_waid, quiz_pack)
                             # send quiz
-                            await send_slot_quiz_interactive_template(business_phone_number_id,user_waid,end_process_message,message_id)
+                            await send_slot_quiz_interactive_template("sa_handler",business_phone_number_id,user_waid,quiz,message_id)
                              
                         else:
                             error_message = "Please enter answer as instructed"
-                            await send_slot_quiz_interactive_template(business_phone_number_id, user_waid, error_message, message_id)
-                            
+                            await send_slot_quiz_interactive_template("sa_handler",business_phone_number_id, user_waid, error_message, message_id)
+
+                    if current_count_ == '1': 
+                        print(f"processing {handler}, with count {current_count_}")
+                        user_input = user_message
+                        if verify_is_percentage(user_input):
+                            # record
+                            Session.save_reg_answer(user_waid,current_count_, user_input)
+                            # update counter
+                            # get question pack
+                            quiz_pack = SlotQuestion.get_question_pack('SA')
+                            print(f"fetched quiz_pack, {quiz_pack}")
+                            # get first quiz
+                            end_process_message = "Youre saving percentage has been succesfully set!"
+                            try:
+                                AccountSummary.update_acc_summary(user_waid, {"saving_percentage":float(user_input)})
+                                
+                                Session.clear_answer_slot(user_waid)
+                                Session.off_slot_filling(user_waid)
+                                Session.on_main_menu_nav(user_waid, "main_menu_select_home")
+                                # ++ slotfilling
+                                # Session.step_slotting(user_waid, quiz_pack)
+                                # send quiz
+                                await send_status_congrats_reg_interactive_template("sa_handler",business_phone_number_id,user_waid,end_process_message,message_id)
+
+                            except Exception as e:
+                                print(f"finish slot filling error, {e}")
+                                end_process_message = "There seems to be an error with your submission"
+                                await send_status_error_reg_interactive_template("sa_handler",business_phone_number_id,user_waid,end_process_message,message_id)
+                                  
+                        else:
+                            error_message = "Please enter answer as instructed"
+                            await send_slot_quiz_interactive_template("sa_handler",business_phone_number_id, user_waid, error_message, message_id)
+          
                     
                     
 
@@ -234,7 +298,7 @@ async def webhook():
             AccountSummary.add_summary(user_waid)
 
             # Show unregistered landing
-            await send_mainmenu_reg_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
+            await send_mainmenu_home_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
 
     elif message_type == 'button_reply':
         user_message=''
@@ -257,19 +321,48 @@ async def webhook():
             Session.on_main_menu_nav(user_waid, "main_menu_select_home")
             if MpesaCustomer.get_user_reg_status(user_waid):
                     print(f"Registered Mpesa user")
-                    await send_mainmenu_reg_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
+                    await send_mainmenu_home_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
             else:
                     print(f"Unregistered Mpesa user")
-                    await send_mainmenu_reg_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
+                    await send_mainmenu_home_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
 
         if button_reply['id'] == "main_menu_account_button":
             Session.off_main_menu_nav(user_waid)
             Session.on_sub1_menu_nav(user_waid, "sub1_menu_select_acc")
+
+            # Helper function to convert snake_case to Title Case
+            def convert_to_title_case(snake_str):
+                components = snake_str.split('_')
+                return ' '.join(x.capitalize() for x in components)
+
+            # Fetch the account summary
+            acc_summary = AccountSummary.get_acc_summary(user_waid)
+
+            # Decode, format and convert keys to Title Case
+            formatted_summary = '\n\n'.join([f"{convert_to_title_case(key.decode('utf-8'))}: {value.decode('utf-8')}" for key, value in acc_summary.items()])
+
+            # Construct the user message for the account summary
+            user_message = f"Here is your account summary:\n\n{formatted_summary}"
+
+            # Fetch the user registration information
+            user_registration = MpesaCustomer.get_single_user(user_waid)
+
+            # Selectively include only specific fields and format keys
+            filtered_registration = {k: v for k, v in user_registration.items() if k.decode('utf-8') in ['whatsapp_client_number', 'mpesa_transaction_number', 'created_at']}
+            formatted_registration = '\n'.join([f"{convert_to_title_case(key.decode('utf-8'))}: {value.decode('utf-8')}" for key, value in filtered_registration.items()])
+
+            # Append the user registration information to the user message
+            user_message += f"\n\nChecking user registration:\n\n{formatted_registration}"
+
+            # Print or return the user message
+            print(user_message)
+
+
             if MpesaCustomer.get_user_reg_status(user_waid):
-                print(f"Registered Mpesa user")
+                print(f"\n\nRegistered Mpesa user")
                 await send_sub1menu_acc_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
             else:
-                print(f"Unregisterd Mpesa user")
+                print(f"\n\nUnregisterd Mpesa user")
                 await send_sub1menu_acc_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
         
         if button_reply['id'] == "sub1_menu_acc_cancel_button":
@@ -277,10 +370,10 @@ async def webhook():
             Session.on_main_menu_nav(user_waid,"main_menu_select_home")
             if MpesaCustomer.get_user_reg_status(user_waid):
                     print(f"Registered Mpesa user")
-                    await send_mainmenu_reg_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
+                    await send_mainmenu_home_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
             else:
                     print(f"Unregistered Mpesa user")
-                    await send_mainmenu_reg_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
+                    await send_mainmenu_home_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
         
         if button_reply['id'] == "sub1_menu_acc_reg_button":
             Session.off_sub1_menu_nav(user_waid)
@@ -290,6 +383,7 @@ async def webhook():
         if button_reply['id'] == "sub2_menu_reg_cancel_button":
             Session.off_sub2_menu_nav(user_waid)
             Session.on_sub1_menu_nav(user_waid, "sub1_menu_select_acc")
+            user_message="sure"
             if MpesaCustomer.get_user_reg_status(user_waid):
                 print(f"Registered Mpesa user")
                 await send_sub1menu_acc_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
@@ -316,9 +410,9 @@ async def webhook():
             # ++ slotfilling
             # Session.step_slotting(user_waid, quiz_pack)
             # send quiz
-            await send_slot_quiz_interactive_template(business_phone_number_id,user_waid,quiz,message_id)
+            await send_slot_quiz_interactive_template('ru_handler',business_phone_number_id,user_waid,quiz,message_id)
 
-        if button_reply['id'] =="slot_filling_cancel_button":
+        if button_reply['id'] =="slot_filling_reg_cancel_button":
             # set slotfilling off
             Session.off_slot_filling(user_waid)
             # clean answer payload
@@ -328,10 +422,81 @@ async def webhook():
             Session.on_sub2_menu_nav(user_waid,"sub2_menu_select_register")
             await send_sub2menu_register_interactive_template(business_phone_number_id,user_waid,user_message, message_id)
         
+        if button_reply['id'] == "status_congrats_reg_done_button":
+            Session.off_slot_filling(user_waid)
+            Session.clear_answer_slot(user_waid)
+            Session.on_main_menu_nav(user_waid,"main_menu_select_home")
+            await send_mainmenu_home_interactive_template(True,business_phone_number_id,user_waid,user_message, message_id)
+
+        if button_reply['id'] == "status_error_reg_cancel_button":
+            Session.off_slot_filling(user_waid)
+            Session.clear_answer_slot(user_waid)
+            Session.on_main_menu_nav(user_waid,"main_menu_select_home")
+            await send_mainmenu_home_interactive_template(False,business_phone_number_id,user_waid,user_message, message_id)
+
+        if button_reply['id'] == "status_error_reg_redo_button":
+            Session.off_sub1_menu_nav(user_waid)
+            Session.on_sub2_menu_nav(user_waid,"sub2_menu_select_register")
+            await send_sub2menu_register_interactive_template(business_phone_number_id,user_waid,user_message, message_id)
+        
              
 
-        if button_reply['id'] == "main_menu_spend_button":
+        
+        if button_reply['id'] == "sub1_menu_acc_save_button":
+            Session.off_sub1_menu_nav(user_waid)
+            Session.on_sub2_menu_nav(user_waid,"sub2_menu_select_save")
+            user_message = "Select your saving plan"
+            await send_sub2menu_save_interactive_template(business_phone_number_id,user_waid,user_message, message_id)
+        
+        if button_reply['id'] == "sub2_menu_save_cancel_button":
+            Session.off_sub2_menu_nav(user_waid)
+            Session.on_sub1_menu_nav(user_waid, "sub1_menu_select_acc")
+            if MpesaCustomer.get_user_reg_status(user_waid):
+                print(f"Registered Mpesa user")
+                await send_sub1menu_acc_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
+            else:
+                print(f"Unregisterd Mpesa user")
+                await send_sub1menu_acc_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
             pass 
+
+        if button_reply['id'] == "sub2_menu_save_proceed_button":
+            print(f"About to start save slot filling")
+            # off sub2_main_nav
+            Session.off_sub2_menu_nav(user_waid)
+            # on slotfilling
+            Session.set_slot_filling_on(user_waid)
+            Session.load_handler(user_waid, 'sa_handler', "SA",0,2)
+
+            # get first question
+            slot_details = Session.fetch_slot_details(user_waid)
+            print(f"fetched slot details , {slot_details}")
+            # get question pack
+            quiz_pack = SlotQuestion.get_question_pack("SA")
+            print(f"fetched quiz_pack, {quiz_pack}")
+            # get first quiz
+            quiz = quiz_pack[slot_details['slot_count']]
+
+            handler = "sa_handler"
+            await send_slot_quiz_interactive_template(handler, business_phone_number_id,user_waid,quiz,message_id)
+
+        if button_reply['id'] == "slot_filling_save_cancel_button":
+            # set slotfilling off
+            Session.off_slot_filling(user_waid)
+            # clean answer payload
+            Session.clear_answer_slot(user_waid)
+            # return back to menu sub2_menu_select_reg
+            Session.off_sub1_menu_nav(user_waid)
+            Session.on_sub2_menu_nav(user_waid,"sub2_menu_select_register")
+            await send_sub2menu_save_interactive_template(business_phone_number_id,user_waid,user_message, message_id)
+        
+
+        if button_reply['id'] == "status_congrats_sa_done_button":
+            Session.off_slot_filling(user_waid)
+            Session.clear_answer_slot(user_waid)
+            Session.on_main_menu_nav(user_waid,"main_menu_select_home")
+            await send_mainmenu_home_interactive_template(True,business_phone_number_id,user_waid,user_message, message_id)
+
+
         
 
     elif message_type == 'status':
@@ -363,7 +528,12 @@ def verify_is_yes(input):
     return bool(pattern.match(input))
 
 
-async def send_mainmenu_reg_interactive_template(reg_status, business_phone_number_id, to, message, reply_message_id):
+def verify_is_percentage(input):
+    pattern = re.compile(r'^\s*\d+(\.\d+)?\s*%?\s*$')
+    return bool(pattern.match(input))
+
+
+async def send_mainmenu_home_interactive_template(reg_status, business_phone_number_id, to, message, reply_message_id):
     headers = {
         "Content-Type":"application/json",
         "Authorization":f"Bearer {GRAPH_API_TOKEN}"
@@ -540,7 +710,7 @@ async def send_sub1menu_acc_interactive_template(reg_status,business_phone_numbe
                 }
             },
             "body": {
-                "text": "Learn more about SpendVest and how it can help you save."
+                "text": f"{message}"
             },
             "footer": {
                 "text": "Choose an option below"
@@ -626,14 +796,14 @@ async def send_sub2menu_save_interactive_template(business_phone_number_id, to, 
         {
             "type": "reply",
             "reply": {
-                "id": "sub2_menu_save%_proceed_button",
+                "id": "sub2_menu_save_proceed_button",
                 "title": "Proceed"
             }
         },
         {
             "type": "reply",
             "reply": {
-                "id": "sub2_menu_save%_cancel_button",
+                "id": "sub2_menu_save_cancel_button",
                 "title": "Cancel"
             }
         }
@@ -846,21 +1016,61 @@ async def send_sub2menu_sendmoney_interactive_template(business_phone_number_id,
                 print(await response.text())
     
 
-async def send_slot_quiz_interactive_template(business_phone_number_id, to, message, reply_message_id):
+async def send_slot_quiz_interactive_template(slot_handler, business_phone_number_id, to, message, reply_message_id):
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {GRAPH_API_TOKEN}"
     }
 
-    button_set = [
+    if slot_handler == "ru_handler":
+        button_set = [
         {
             "type": "reply",
             "reply": {
-                "id": "slot_filling_cancel_button",
+                "id": "slot_filling_reg_cancel_button",
                 "title": "Cancel"
             }
         }
     ]
+
+    elif slot_handler == "sa_handler":
+        button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "slot_filling_save_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+         
+
+    elif slot_handler == "sm_handler":
+        button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "slot_filling_sm_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+        
+
+    elif slot_handler == "wd_handler":
+        button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "slot_filling_wd_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+         
+
+
+    
 
     data = {
         "messaging_product": "whatsapp",
@@ -898,21 +1108,61 @@ async def send_slot_quiz_interactive_template(business_phone_number_id, to, mess
 
 
 
-async def send_status_congrats_interactive_template(business_phone_number_id, to, message, reply_message_id):
+async def send_status_congrats_reg_interactive_template(slot_handler,business_phone_number_id, to, message, reply_message_id):
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {GRAPH_API_TOKEN}"
     }
 
-    button_set = [
+   
+    
+    if slot_handler == "ru_handler":
+         button_set = [
         {
             "type": "reply",
             "reply": {
-                "id": "status_congrats_done_button",
+                "id": "status_congrats_reg_done_button",
                 "title": "Done"
             }
         }
     ]
+
+    elif slot_handler == "sa_handler":
+        button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_congrats_sa_done_button",
+                "title": "Done"
+            }
+        }
+    ]
+    
+         
+
+    elif slot_handler == "sm_handler":
+        button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "slot_filling_sm_cancel_button",
+                "title": "Done"
+            }
+        }
+    ]
+        
+
+    elif slot_handler == "wd_handler":
+        button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "slot_filling_wd_cancel_button",
+                "title": "Done"
+            }
+        }
+    ]
+
 
     data = {
         "messaging_product": "whatsapp",
@@ -948,28 +1198,90 @@ async def send_status_congrats_interactive_template(business_phone_number_id, to
 
      
 
-async def send_status_error_interactive_template(business_phone_number_id, to, message, reply_message_id):
+async def send_status_error_reg_interactive_template(slot_handler, business_phone_number_id, to, message, reply_message_id):
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {GRAPH_API_TOKEN}"
     }
 
-    button_set = [
+    
+
+    if slot_handler == "ru_handler":
+        button_set = [
         {
             "type": "reply",
             "reply": {
-                "id": "status_error_redo_button",
+                "id": "status_error_reg_redo_button",
                 "title": "Redo"
             }
         },
         {
             "type": "reply",
             "reply": {
-                "id": "status_error_cancel_button",
+                "id": "status_error_reg_cancel_button",
                 "title": "Cancel"
             }
         }
     ]
+
+    elif slot_handler == "sa_handler":
+       button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_error_sa_redo_button",
+                "title": "Redo"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_error_sa_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+    
+         
+
+    elif slot_handler == "sm_handler":
+       button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_error_sm_redo_button",
+                "title": "Redo"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_error_sm_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+        
+
+    elif slot_handler == "wd_handler":
+        button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_error_wd_redo_button",
+                "title": "Redo"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_error_wd_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+
+    
 
     data = {
         "messaging_product": "whatsapp",

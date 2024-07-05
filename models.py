@@ -207,7 +207,7 @@ def load_slotquizes():
             "slot_code": "RU",
             "slot_description": "Register Mpesa Number",
             "question_payload": {
-                0: "Register!\n\nWould you like us to register this number for Mpesa service?\n Yes or No",
+                0: "Register!\n\nWould you like us to register this number for Mpesa service?\n\n Yes or No",
                 1: "Confirm registration, by re-entering previous answer"
             }
         },
@@ -224,7 +224,7 @@ def load_slotquizes():
             "slot_code": "SA",
             "slot_description": "Set Saving Percentage",
             "question_payload": {
-                0: "Set savings!\n\nEnter percentage",
+                0: "Set savings!\n\nEnter percentage value",
                 1: "Confirm percentage, by repeating it"
             }
         },
