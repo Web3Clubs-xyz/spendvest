@@ -110,16 +110,7 @@ class RequestTask:
         key = f"request_task:{ref}"
         task = redis_client.hgetall(key)
         if task != None :
-            return {
-                # 'uid':task[b'uid'],
-                'customer_waid':task[b'customer_waid'].decode('utf-8'),
-                'service_menu':task[b'service_menu'].decode('utf-8'),
-                'service_description':task[b'service_description'].decode('utf-8'),
-                'service_payload':task[b'service_payload'].decode('utf-8'),
-                'completed':task[b'completed'].decode('utf-8'),
-                'created_at':task[b'created_at'].decode('utf-8'),
-                'updated_at':task[b'updated_at'].decode('utf-8')
-            }
+            return task
         
     @staticmethod
     def complete_task(ref):
@@ -186,15 +177,16 @@ class Settlement:
     def get_customer_settlement(ref):
         key = f"settlement:{ref}"
         set = redis_client.hgetall(key)
-        settlement = {
-            'end_settlement_number' : set[b'end_settlement_number'],
-            'menu_code': set[b'menu_code'],
-            'amount': set[b'amount'],
-            'completed':set[b'completed'],
-            'created_at':set[b'created_at'],
-            'updated_at':set[b'updated_at']
-        }
-        return settlement
+
+        # settlement = {
+        #     'end_settlement_number' : set[b'end_settlement_number'],
+        #     # 'menu_code': set[b'menu_code'],
+            # 'amount': set[b'amount'],
+            # 'completed':set[b'completed'],
+            # 'created_at':set[b'created_at'],
+            # 'updated_at':set[b'updated_at']
+        # }
+        return set
 
     @staticmethod
     def complete_customer_settlement(ref):

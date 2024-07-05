@@ -6,9 +6,11 @@ from dotenv import load_dotenv
 from pprint import pprint
 import string
 import random
+import json 
 
 from blu import Session 
-from models import SlotQuestion, AccountSummary, MpesaCustomer
+from models import SlotQuestion, AccountSummary, MpesaCustomer, Settlement,RequestTask
+from payments2 import send_payment, send_user_stk
 import re
 
 # Load environment variables from .env file
@@ -239,6 +241,7 @@ async def webhook():
                         if verify_is_percentage(user_input):
                             # record
                             Session.save_reg_answer(user_waid,current_count_, user_input)
+                            # should complete
                             # update counter
                             # get question pack
                             quiz_pack = SlotQuestion.get_question_pack('SA')
@@ -266,7 +269,65 @@ async def webhook():
                             await send_slot_quiz_interactive_template("sa_handler",business_phone_number_id, user_waid, error_message, message_id)
           
                     
-                    
+                if handler == "sm_handler":
+                    if current_count_ in ('0', '1'): 
+                        print(f"processing {handler}, with count {current_count_}")
+                        user_input = user_message
+                        if is_valid_phonenumber(user_input):
+                            # record
+                            Session.save_reg_answer(user_waid,current_count_, user_input)
+                            # update counter
+                            # get question pack
+                            quiz_pack = SlotQuestion.get_question_pack('SM')
+                            print(f"fetched quiz_pack, {quiz_pack}")
+                            # get first quiz
+                            quiz = quiz_pack[str(int(current_count_) + 1)]
+                            # ++ slotfilling
+                            Session.step_slotting(user_waid, quiz_pack)
+                            # send quiz
+                            await send_slot_quiz_interactive_template("sa_handler",business_phone_number_id,user_waid,quiz,message_id)
+                             
+                        else:
+                            error_message = "Please phone number as instructed"
+                            await send_slot_quiz_interactive_template("sm_handler",business_phone_number_id, user_waid, error_message, message_id)
+
+                    if current_count_ == '2': 
+                        print(f"processing {handler}, with count {current_count_}")
+                        user_input = user_message
+
+                        if is_valid_amount(user_input):
+                            # record
+                            Session.save_reg_answer(user_waid,current_count_, user_input)
+                            
+                            # update counter
+                            # get question pack
+                            quiz_pack = SlotQuestion.get_question_pack('SM')
+                            print(f"fetched quiz_pack, {quiz_pack}")
+                            # get first quiz
+                            end_process_message = "Your send money request has been succesfully set!"
+                            try:
+                                end_number = json.loads(Session.get_session(user_waid)[b'answer_payload'])[0]
+                                print(f"sending to end number : {end_number}")
+                                send_user_stk(user_waid, user_input, "SM", end_number)
+                                Session.complete_sm_slotting(user_waid)                           
+                                Session.clear_answer_slot(user_waid)
+                                Session.off_slot_filling(user_waid)
+                                Session.on_main_menu_nav(user_waid, "main_menu_select_home")
+                                # ++ slotfilling
+                                # Session.step_slotting(user_waid, quiz_pack)
+                                # send quiz
+                                await send_status_congrats_reg_interactive_template("sm_handler",business_phone_number_id,user_waid,end_process_message,message_id)
+
+                            except Exception as e:
+                                print(f"finish slot filling error, {e}")
+                                end_process_message = "There seems to be an error with your submission"
+                                await send_status_error_reg_interactive_template("sm_handler",business_phone_number_id,user_waid,end_process_message,message_id)
+                                
+                        else:
+                            error_message = "Please enter amount as instructed"
+                            await send_slot_quiz_interactive_template("sm_handler",business_phone_number_id, user_waid, error_message, message_id)
+
+
 
                 
 
@@ -496,7 +557,75 @@ async def webhook():
             Session.on_main_menu_nav(user_waid,"main_menu_select_home")
             await send_mainmenu_home_interactive_template(True,business_phone_number_id,user_waid,user_message, message_id)
 
+        if button_reply['id'] == "status_error_sa_redo_button":
+            Session.off_sub1_menu_nav(user_waid)
+            Session.on_sub2_menu_nav(user_waid,"sub2_menu_select_save")
+            await send_sub2menu_save_interactive_template(business_phone_number_id,user_waid,user_message, message_id)
 
+
+        # send money
+        if button_reply['id'] == "main_menu_spend_button":
+            Session.off_main_menu_nav(user_waid)
+            Session.on_sub1_menu_nav(user_waid, "sub1_menu_select_spend")
+            if MpesaCustomer.get_user_reg_status(user_waid):
+                print(f"\n\nRegistered Mpesa user")
+                await send_sub1menu_spend_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
+            else:
+                print(f"\n\nUnregisterd Mpesa user")
+                await send_sub1menu_spend_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
+        
+        if button_reply['id'] == "sub1_menu_spend_cancel_button":
+            Session.off_sub1_menu_nav(user_waid)
+            Session.on_main_menu_nav(user_waid,"main_menu_select_home")
+            if MpesaCustomer.get_user_reg_status(user_waid):
+                    print(f"Registered Mpesa user")
+                    await send_mainmenu_home_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
+            else:
+                    print(f"Unregistered Mpesa user")
+                    await send_mainmenu_home_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
+         
+
+        if button_reply['id'] == "sub1_menu_spend_sendmoney_button":
+            Session.off_sub1_menu_nav(user_waid)
+            Session.on_sub2_menu_nav(user_waid,"sub2_menu_select_sendmoney")
+            await send_sub2menu_sendmoney_interactive_template(business_phone_number_id,user_waid,user_message, message_id) 
+
+        if button_reply['id'] == "sub2_menu_sendmoney_proceed_button":
+            print(f"proceed with sending money slot filling")
+            # off sub2_main_nav
+            Session.off_sub2_menu_nav(user_waid)
+            # on slotfilling
+            Session.set_slot_filling_on(user_waid)
+            Session.load_handler(user_waid, 'sm_handler', "SM",0,3)
+
+            # get first question
+            slot_details = Session.fetch_slot_details(user_waid)
+            print(f"fetched slot details , {slot_details}")
+            # get question pack
+            quiz_pack = SlotQuestion.get_question_pack("SM")
+            print(f"fetched quiz_pack, {quiz_pack}")
+            # get first quiz
+            quiz = quiz_pack[slot_details['slot_count']]
+
+            handler = "sm_handler"
+            await send_slot_quiz_interactive_template(handler, business_phone_number_id,user_waid,quiz,message_id)
+
+
+        if button_reply['id'] == "sub2_menu_sendmoney_cancel_button":
+           Session.off_sub2_menu_nav(user_waid)
+           Session.on_sub1_menu_nav(user_waid, "sub1_menu_select_spend")
+           await send_sub1menu_spend_interactive_template(True,business_phone_number_id, user_waid, user_message, message_id)
+        
+        if button_reply['id'] == "slot_filling_sm_cancel_button":
+            # set slotfilling off
+            Session.off_slot_filling(user_waid)
+            # clean answer payload
+            Session.clear_answer_slot(user_waid)
+            # return back to menu sub2_menu_select_reg
+            Session.off_sub1_menu_nav(user_waid)
+            Session.on_sub2_menu_nav(user_waid,"sub2_menu_select_spend")
+            await send_sub2menu_sendmoney_interactive_template(business_phone_number_id,user_waid,user_message, message_id)
+        
         
 
     elif message_type == 'status':
@@ -532,6 +661,13 @@ def verify_is_percentage(input):
     pattern = re.compile(r'^\s*\d+(\.\d+)?\s*%?\s*$')
     return bool(pattern.match(input))
 
+def is_valid_amount(input):
+    pattern = re.compile(r'^\d+$')
+    return bool(pattern.match(input))
+
+def is_valid_phonenumber(input):
+    pattern = re.compile(r'^07\d{8,10}$')
+    return bool(pattern.match(input))
 
 async def send_mainmenu_home_interactive_template(reg_status, business_phone_number_id, to, message, reply_message_id):
     headers = {
@@ -914,14 +1050,21 @@ async def send_sub1menu_spend_interactive_template(reg_status,business_phone_num
         {
             "type": "reply",
             "reply": {
-                "id": "sub1_menu_send_sendmoney_button",
+                "id": "sub1_menu_spend_sendmoney_button",
                 "title": "Send Money"
             }
         },
         {
             "type": "reply",
             "reply": {
-                "id": "sub1_menu_send_cancel_button",
+                "id": "sub1_menu_spend_buyairtime_button",
+                "title": "Buy Airtime"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub1_menu_spend_cancel_button",
                 "title": "Cancel"
             }
         }
@@ -1314,7 +1457,100 @@ async def send_status_error_reg_interactive_template(slot_handler, business_phon
             else:
                 print(f"Failed to send message: {response.status}")
                 print(await response.text())
- 
+
+
+def convert_phone_number(end_number):
+    end_number = end_number.decode('utf-8')
+    pattern = re.compile(r'^0(\d{8,10})$')
+    match = pattern.match(end_number)
+    if match:
+        return '+254' + match.group(1)
+    return end_number
+
+
+
+# mpesa
+@app.route("/mpesa_callback", methods=['POST'])
+def process_callback():
+    # check if is user cancelled also
+    # update task as complete if user input pin
+    # also update for settlement as complete
+    print(f"recieved data is : {request}, and is of type : {type(request)}")
+
+    in_data = request.get_json()
+    print(f"recieved callback data is, {in_data}")
+
+    ref = in_data['MerchantRequestID']
+
+    requested_task = RequestTask.get_task(ref)
+    print(f"\n\nfetched task is : {requested_task}")
+
+    print("\n\n\n")
+    requested_settlement = Settlement.get_customer_settlement(ref)
+    print(f"fetched settlement is : {requested_settlement}")
+    
+    customer_waid = requested_task[b'customer_waid'].decode('utf-8')
+    
+
+    requested_acc_summary = AccountSummary.get_acc_summary(customer_waid)
+    print(f"fetched account summary is : {requested_acc_summary}")
+
+    save_percentage = requested_acc_summary[b'saving_percentage'].decode('utf-8')
+    save_percentage = float(save_percentage)
+
+    print(f"fetched saving percentage : {save_percentage}")
+    
+    if 'MerchantAccountBalance' in in_data.keys():
+        # send-payment callback
+        # update task and settlemtnt
+        
+        print(f"send_payment callback")
+        Settlement.complete_customer_settlement(ref)
+        RequestTask.complete_task(ref)
+        # update acc summarys
+        pass
+    else:
+        # send_user_stk : 0 or 1
+        # send_payment()
+        if in_data['ResultCode'] == '1032':
+            print(f"user has cancelled stk push")
+        else:
+            end_number = requested_settlement[b'end_settlement_number'].decode('utf-8')
+            payment_amount = requested_settlement[b'amount']
+            payment_amount = payment_amount.decode('utf-8')
+            print(f"now settling payment")
+            # end_number = "0" + end_number[4:]
+
+            print(f"end_number : {end_number}")
+            print(f"payment amount : {payment_amount}")
+            # update acc summary, for pending settlements,total settlements , amount settlement, total amount saved and last amount saved
+
+            original_amount = float(payment_amount) / float(1.0 + save_percentage)
+            bal1 = float(payment_amount) - original_amount
+
+            summary_update = {
+                'pending_settlement':0,
+                'total_settlement': float(requested_acc_summary[b'total_settlement'].decode('utf-8')) + 1,
+                'amount_settled' : float(requested_acc_summary[b'amount_settled'].decode('utf-8')) + float(payment_amount),
+                'total_amount_saved':float(requested_acc_summary[b'total_amount_saved'].decode('utf-8')) + float(bal1),
+                'last_amount_saved':float(requested_acc_summary[b'total_amount_saved'].decode('utf-8')) + float(bal1)
+
+            }
+
+            AccountSummary.update_acc_summary(requested_task[b'customer_waid'], summary_update)
+
+            
+            send_payment(str(end_number), payment_amount)
+            
+    
+    return 'ok'
+
+
+@app.route("/mpesa_callback_timeout", methods=['POST'])
+def process_callback_timeout():
+    print(f"recieved callback data is, {request.get_json()}")
+
+    return 'ok'
 
 
 @app.route("/", methods=["GET"])

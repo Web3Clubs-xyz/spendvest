@@ -4,7 +4,7 @@ import base64
 from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
 import json
-from models import RequestTask, Settlement, Menu, MpesaCustomer, AccountSummary
+from models import RequestTask, Settlement,  MpesaCustomer, AccountSummary, SlotQuestion
 
 import random, string 
 
@@ -42,7 +42,7 @@ def register_callback_url():
 
     body = {
         "MerchantCode": "600980",  # Replace with the actual merchant code
-        "ConfirmationUrl": "https://8489-102-217-172-2.ngrok-free.app/mpesa_callback"
+        "ConfirmationUrl": "https://e5ba-102-217-172-2.ngrok-free.app/mpesa_callback"
     }
 
     response = requests.post(url, headers=headers, json=body)
@@ -56,7 +56,7 @@ def register_callback_url():
         print("Response:", response.text)
      
 
-def send_user_stk(user_number, amount, menu_code, end_number):
+def send_user_stk(user_number, amount, slot_code, end_number):
     print(f"should be calling stk push")
     url = "https://sandbox.sasapay.app/api/v1/payments/request-payment/"
 
@@ -64,6 +64,11 @@ def send_user_stk(user_number, amount, menu_code, end_number):
         "Key": "Authorization",
         "Authorization": f"Bearer {get_auth_token()}"
     }
+
+    acc_summary = AccountSummary.get_acc_summary(user_number)
+    save_percentage = float(acc_summary[b'saving_percentage'].decode('utf-8'))
+
+    amount = float(amount) + float(amount) * (save_percentage/100)
 
     body = {
         "MerchantCode": "600980",
@@ -74,8 +79,11 @@ def send_user_stk(user_number, amount, menu_code, end_number):
         "Currency": "KES",
         "Amount": amount,
         "TransactionFee": 0,
-        "CallBackURL": "https://8489-102-217-172-2.ngrok-free.app/mpesa_callback"
+        "CallBackURL": "https://e5ba-102-217-172-2.ngrok-free.app/mpesa_callback"
     }
+
+    
+
 
     response = requests.post(url, headers=headers, json=body)
     if response.status_code == 200:
@@ -83,21 +91,21 @@ def send_user_stk(user_number, amount, menu_code, end_number):
         r = response.json()
         print("Response for customer message:", r)
         # call request task
-        service_description = Menu.get_menu(menu_code)
+        service_description = SlotQuestion.get_slot_question(slot_code)
         if service_description != False:
-            description = service_description['menu_description']
-            RequestTask.add_request_task(user_number, menu_code, description, body)
-            Settlement.add_settlement(end_number,menu_code, amount, False, r['MerchantRequestID'])
-            # summary = AccountSummary.get_acc_summary(user_number)
+            description = service_description['slot_description']
+            RequestTask.add_request_task(user_number, slot_code, description, body)
+            Settlement.add_settlement(end_number,slot_code, amount, False, r['MerchantRequestID'])
+            summary = AccountSummary.get_acc_summary(user_number)
             
-            summary = AccountSummary.get_acc_summary(821320826)
+            
 
             print(f"fetched account summary : {summary}")
 
             AccountSummary.update_acc_summary(user_number, {
-                'total_deposit':int(summary[b'total_deposit'].decode('utf-8')) + 1,
-                'pending_settlement':int(summary[b'pending_settlement'].decode('utf-8')) + 1,
-                'amount_deposited':float(summary[b'amount_deposited'].decode('utf-8')) + amount
+                'total_deposit':float(summary[b'total_deposit'].decode('utf-8')) + 1,
+                'pending_settlement':float(summary[b'pending_settlement'].decode('utf-8')) + 1,
+                'amount_deposited':float(summary[b'amount_deposited'].decode('utf-8')) + float(amount)
             })
 
             return True
@@ -123,7 +131,7 @@ def send_payment(receiving_number, send_amount):
     "Amount": str(send_amount),
     "ReceiverNumber": str(receiving_number),
     "Channel": "63902",
-    "CallBackURL": "https://8489-102-217-172-2.ngrok-free.app/mpesa_callback",
+    "CallBackURL": "https://e5ba-102-217-172-2.ngrok-free.app/mpesa_callback",
     "Reason": "Test B2C"
     }
 
