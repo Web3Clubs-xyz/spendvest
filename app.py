@@ -616,18 +616,235 @@ async def send_sub2menu_register_interactive_template(business_phone_number_id, 
                 print(await response.text())
  
 
-async def send_sub2menu_save_interactive_template():
-    pass 
+async def send_sub2menu_save_interactive_template(business_phone_number_id, to, message, reply_message_id):
+    headers = {
+        "Content-Type":"application/json",
+        "Authorization":f"Bearer {GRAPH_API_TOKEN}"
+    }
 
-async def send_sub2menu_withdraw_interactive_template():
-    pass 
+    button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub2_menu_save%_proceed_button",
+                "title": "Proceed"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub2_menu_save%_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+
+    data = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "header": {
+                "type": "image",
+                "image": {
+                    "id": f"{media_map['Save%Media.png']}"
+                }
+            },
+            "body": {
+                "text": f"{message}"
+            },
+            "footer": {
+                "text": "To proceed choose an option below"
+            },
+            "action": {
+                "buttons": button_set
+            }
+        }
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{WHATSAPP_API_URL}/{business_phone_number_id}/messages", headers=headers, json=data) as response:
+            if response.status == 200:
+                print("Message sent successfully")
+            else:
+                print(f"Failed to send message: {response.status}")
+                print(await response.text())
+     
+
+async def send_sub2menu_withdraw_interactive_template(business_phone_number_id, to, message, reply_message_id):
+    headers = {
+        "Content-Type":"application/json",
+        "Authorization":f"Bearer {GRAPH_API_TOKEN}"
+    }
+
+    button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub2_menu_withdraw_proceed_button",
+                "title": "Proceed"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub2_menu_withdraw_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+
+    data = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "header": {
+                "type": "image",
+                "image": {
+                    "id": f"{media_map['WithdrawMedia.png']}"
+                }
+            },
+            "body": {
+                "text": f"{message}"
+            },
+            "footer": {
+                "text": "To withdraw chose the buttons below"
+            },
+            "action": {
+                "buttons": button_set
+            }
+        }
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{WHATSAPP_API_URL}/{business_phone_number_id}/messages", headers=headers, json=data) as response:
+            if response.status == 200:
+                print("Message sent successfully")
+            else:
+                print(f"Failed to send message: {response.status}")
+                print(await response.text())
+     
 
 
-async def send_sub1menu_spend_interactive_template():
+async def send_sub1menu_spend_interactive_template(reg_status,business_phone_number_id, to, message, reply_message_id):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GRAPH_API_TOKEN}"
+    }
+
+    button_set = [
+        
+    ]
+
+    if reg_status == True:
+        button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub1_menu_send_sendmoney_button",
+                "title": "Send Money"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub1_menu_send_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+    
+    data = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "header": {
+                "type": "image",
+                "image": {
+                    "id": f"{media_map['SpendMedia.png']}"
+                }
+            },
+            "body": {
+                "text": "Learn more about SpendVest and how it can help you save."
+            },
+            "footer": {
+                "text": "Choose an option below"
+            },
+            "action": {
+                "buttons": button_set
+            }
+        }
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{WHATSAPP_API_URL}/{business_phone_number_id}/messages", headers=headers, json=data) as response:
+            if response.status == 200:
+                print("Message sent successfully")
+            else:
+                print(f"Failed to send message: {response.status}")
+                print(await response.text())
     pass
 
-async def send_sub2menu_sendmoney_interactive_template():
-    pass 
+async def send_sub2menu_sendmoney_interactive_template(business_phone_number_id, to, message, reply_message_id):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GRAPH_API_TOKEN}"
+    }
+
+    button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub2_menu_sendmoney_proceed_button",
+                "title": "Proceed"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "sub2_menu_sendmoney_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+
+    data = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "header": {
+                "type": "image",
+                "image": {
+                    "id": f"{media_map['SendMoneyMedia.png']}"
+                }
+            },
+            "body": {
+                "text": "Send money and save it while at it"
+            },
+            "footer": {
+                "text": "Choose an option below"
+            },
+            "action": {
+                "buttons": button_set
+            }
+        }
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{WHATSAPP_API_URL}/{business_phone_number_id}/messages", headers=headers, json=data) as response:
+            if response.status == 200:
+                print("Message sent successfully")
+            else:
+                print(f"Failed to send message: {response.status}")
+                print(await response.text())
+    
 
 async def send_slot_quiz_interactive_template(business_phone_number_id, to, message, reply_message_id):
     headers = {
@@ -681,11 +898,111 @@ async def send_slot_quiz_interactive_template(business_phone_number_id, to, mess
 
 
 
-async def send_status_congrats_interactive_template():
-    pass 
+async def send_status_congrats_interactive_template(business_phone_number_id, to, message, reply_message_id):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GRAPH_API_TOKEN}"
+    }
 
-async def send_status_error_interactive_template():
-    pass 
+    button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_congrats_done_button",
+                "title": "Done"
+            }
+        }
+    ]
+
+    data = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "header": {
+                "type": "image",
+                "image": {
+                    "id": f"{media_map['StatusSuccessMedia.png']}"
+                }
+            },
+            "body": {
+                "text": f"{message}"
+            },
+            "footer": {
+                "text": "To proceed choose an option below"
+            },
+            "action": {
+                "buttons": button_set
+            }
+        }
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{WHATSAPP_API_URL}/{business_phone_number_id}/messages", headers=headers, json=data) as response:
+            if response.status == 200:
+                print("Message sent successfully")
+            else:
+                print(f"Failed to send message: {response.status}")
+                print(await response.text())
+
+     
+
+async def send_status_error_interactive_template(business_phone_number_id, to, message, reply_message_id):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GRAPH_API_TOKEN}"
+    }
+
+    button_set = [
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_error_redo_button",
+                "title": "Redo"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_error_cancel_button",
+                "title": "Cancel"
+            }
+        }
+    ]
+
+    data = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "header": {
+                "type": "image",
+                "image": {
+                    "id": f"{media_map['StatusErrorMedia.png']}"
+                }
+            },
+            "body": {
+                "text": f"{message}"
+            },
+            "footer": {
+                "text": "To proceed choose an option below"
+            },
+            "action": {
+                "buttons": button_set
+            }
+        }
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{WHATSAPP_API_URL}/{business_phone_number_id}/messages", headers=headers, json=data) as response:
+            if response.status == 200:
+                print("Message sent successfully")
+            else:
+                print(f"Failed to send message: {response.status}")
+                print(await response.text())
+ 
 
 
 @app.route("/", methods=["GET"])
