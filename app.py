@@ -17,7 +17,7 @@ import re
 load_dotenv()
 
 # Retrieve environment variables
-GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN', "EAAUCpth1wAIBOyVcW78wV0WvwM1ZBrWBRyyTAKtNgfSuwZC3a3hAc7UsUkpjQb8gE1YeZCYm3xIDC97gdBYpd7sZBoiHRIQIXQUP2SGk0c89ZAcGId9VoGZB2y2aQwvWowHOWl0s5ANNHcp7x4ZBQWyyZAPx2A2xKrr4pb1iwNFxrW60dgFYonhz7rD5gWZCXYZCWMgSvZASddHaCENlIkvwu2CSdt48ZCYZD")
+GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN', "EAAUCpth1wAIBOZCYAHogpxiflMq5WS3MSg2ICMprv4g5qO8TDljz79lMJvpis8TGEkXDYWXdIuKPgGXtvOTg2gIKK2TUQIaPBdkVnkpuywUAkr6oRyEYAjR4wAZBL8fXQ5QSgfm8O7lnlC21D2PCX180VCODc5225lqni8fDlZBgIiY763reAdFYqcsSPKm6JJN4UORAz5LZBTFPIOCCD8YasHM5")
 WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN', "123456")
 PORT = int(os.getenv('PORT', 1000))
 WHATSAPP_API_URL = 'https://graph.facebook.com/v18.0'
@@ -651,6 +651,7 @@ media_map = {
     'AccountMedia.png': '707545534817088', 
     'AboutMedia.png': '445867451661198'
     }
+
 
 def verify_is_yes(input):
     pattern = re.compile(r'^yes$', re.IGNORECASE)
@@ -1488,7 +1489,7 @@ def process_callback():
     print("\n\n\n")
     requested_settlement = Settlement.get_customer_settlement(ref)
     print(f"fetched settlement is : {requested_settlement}")
-    
+
     customer_waid = requested_task[b'customer_waid'].decode('utf-8')
     
 
@@ -1514,6 +1515,7 @@ def process_callback():
         # send_payment()
         if in_data['ResultCode'] == '1032':
             print(f"user has cancelled stk push")
+            return 'ok'
         else:
             end_number = requested_settlement[b'end_settlement_number'].decode('utf-8')
             payment_amount = requested_settlement[b'amount']

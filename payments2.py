@@ -79,7 +79,7 @@ def send_user_stk(user_number, amount, slot_code, end_number):
         "Currency": "KES",
         "Amount": amount,
         "TransactionFee": 0,
-        "CallBackURL": "https://spendvest-bot.onrender.com/mpesa_callback"
+        "CallBackURL": "https://e5ba-102-217-172-2.ngrok-free.app/mpesa_callback"
     }
 
     
@@ -95,6 +95,7 @@ def send_user_stk(user_number, amount, slot_code, end_number):
         if service_description != False:
             description = service_description['slot_description']
             RequestTask.add_request_task(user_number, slot_code, description, body)
+
             Settlement.add_settlement(end_number,slot_code, amount, False, r['MerchantRequestID'])
             summary = AccountSummary.get_acc_summary(user_number)
             
@@ -131,7 +132,7 @@ def send_payment(receiving_number, send_amount):
     "Amount": str(send_amount),
     "ReceiverNumber": str(receiving_number),
     "Channel": "63902",
-    "CallBackURL": "https://spendvest-bot.onrender.com/mpesa_callback",
+    "CallBackURL": "https://e5ba-102-217-172-2.ngrok-free.app/mpesa_callback",
     "Reason": "Test B2C"
     }
 
