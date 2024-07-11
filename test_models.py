@@ -1,68 +1,120 @@
-import time
-import random
-from models import MpesaCustomer, SlotQuestion, AccountSummary, RequestTask, Settlement, load_slotquizes
+import unittest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from models import Base, MpesaCustomer, AccountSummary, RequestTask, Settlement, SlotQuestion, DATABASE_URL
+from payments2 import generate_uid, send_payment, send_user_stk
 
-def main():
-    # Step 1: Register a new user
-    whatsapp_client_number = '254703103960'
-    mpesa_transaction_number = '254703103960'
+dev_proxy_url = "https://cb92-102-217-172-2.ngrok-free.app"
 
-    customer = MpesaCustomer.add_mpesa_customer(mpesa_transaction_number, whatsapp_client_number)
-    if customer:
-        print("User registered successfully.")
-    else:
-        print("User registration failed or user already exists.")
-        return
+class TestModels(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.engine = create_engine(DATABASE_URL)
+        TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=cls.engine)
+        Base.metadata.create_all(bind=cls.engine)
+        cls.db = TestingSessionLocal()
 
-    # Step 2: Set amount to save for the user
-    AccountSummary.add_summary(whatsapp_client_number)
-    summary = AccountSummary.get_acc_summary(whatsapp_client_number)
-    print("Account Summary after registration:", summary)
+    @classmethod
+    def tearDownClass(cls):
+        cls.db.close()
+        # Base.metadata.drop_all(bind=cls.engine)
 
-    # Assume the user sets a saving percentage
-    saving_percentage = 5  # Example: user sets 5% saving
-    print(f"User sets saving percentage to {saving_percentage}%.")
-    AccountSummary.update_acc_summary(whatsapp_client_number, {'saving_percentage':saving_percentage})
+    def test_add_mpesa_customer(self):
+        customer = MpesaCustomer.add_mpesa_customer(self.db, "254703103960", "254703103960")
+        print(f"customer with wahtsapp_client_number , {customer.whatsapp_client_number}")
+        
+        self.assertIsNotNone(customer)
+        self.assertEqual(customer.mpesa_transaction_number, "254703103960")
+        self.assertEqual(customer.whatsapp_client_number, "254703103960")
 
-    # Step 3: Request a send money task with the deposited amount
-    service_payload = {
-        'TransactionReference': 'REF123456789',
-        'amount': 1000,  # Assume the user deposits 1000 units
-        'recipient': '254700000002'
-    }
-    RequestTask.add_request_task(whatsapp_client_number, 'SM', 'Send Money', service_payload)
-    task = RequestTask.get_task(service_payload['TransactionReference'])
-    print("Request Task added:", task)
+    def test_add_account_summary(self):
+        summary = AccountSummary.add_summary(self.db, "254703103960")
+        print(f"Account summary for user : {summary.waid}")
 
-    # Step 4: Complete the tasks and record the settlement and account summary
-    RequestTask.complete_task(service_payload['AccountReference'])
-    print("Request Task completed.")
+        self.assertIsNotNone(summary)
+        self.assertEqual(summary.waid, "254703103960")
 
-    # Update account summary
-    summary_payload = {
-        'total_deposit': 1,
-        'total_settlement': 1,
-        'pending_settlement': 0,
-        'amount_deposited': service_payload['amount'],
-        'amount_settled': service_payload['amount'],
-        'last_amount_saved': service_payload['amount'] * (saving_percentage / 100),
-        'total_amount_saved': service_payload['amount'] * (saving_percentage / 100),
-    }
-    AccountSummary.update_acc_summary(whatsapp_client_number, summary_payload)
-    updated_summary = AccountSummary.get_acc_summary(whatsapp_client_number)
-    print("Updated Account Summary:", updated_summary)
+    def test_add_request_task(self):
+        task = RequestTask.add_request_task(self.db, "254703103960", "SM", "description", {"key": "value"})
+        print(f"task fetched for user : {task.customer_waid}")
 
-    # Record the settlement
-    Settlement.add_settlement(whatsapp_client_number, 'SM', service_payload['amount'], True, service_payload['AccountReference'])
-    settlement = Settlement.get_customer_settlement(service_payload['AccountReference'])
-    print("Settlement recorded:", settlement)
+        self.assertIsNotNone(task)
+        self.assertEqual(task.customer_waid, "254703103960")
+        self.assertEqual(task.service_menu, "SM")
+        self.assertEqual(task.service_description, "description")
+        self.assertEqual(task.service_payload, '{"key": "value"}')
 
-    # Mark settlement as completed
-    Settlement.complete_customer_settlement(service_payload['AccountReference'])
-    print("Settlement marked as completed.")
+    def test_add_settlement(self):
+        settlement = Settlement.add_settlement(self.db, "254703103960", "menu_code", 100.0, True, "ref123")
+        print(f"settlement for ref {settlement.ref}")
+
+        self.assertIsNotNone(settlement)
+        self.assertEqual(settlement.ref, "ref123")
+        self.assertEqual(settlement.end_settlement_number, "254703103960")
+        self.assertEqual(settlement.menu_code, "menu_code")
+        self.assertEqual(settlement.amount, 100.0)
+        self.assertEqual(settlement.completed, 1)
+
+    def test_add_slot_question(self):
+        slot_question = SlotQuestion.add_slot_question(self.db, "slot_code", "description", {"question": "payload"})
+        self.assertIsNotNone(slot_question)
+        self.assertEqual(slot_question.slot_code, "slot_code")
+        self.assertEqual(slot_question.slot_description, "description")
+        self.assertEqual(slot_question.question_payload, '{"question": "payload"}')
+    
+    def test_add_user_deposit(self):
+        # example transactions : Deposit
+        # simulating 
+        # Flow : RequestTask, Settlement, AccountSummary
+        user_mpesa_number = '254703103960'
+        end_mpesa_number ='254701561559'
+        slot_code = "SM"
+        description = "Send Money"
+        amount = 10
+
+        body = {
+        "MerchantCode": "600980",
+        "NetworkCode": "63902",
+        "PhoneNumber":user_mpesa_number,
+        "TransactionDesc": "Deposit for Service",
+        "AccountReference": generate_uid(10),
+        "Currency": "KES",
+        "Amount": amount,
+        "TransactionFee": 0,
+        "CallBackURL": f"{dev_proxy_url}/mpesa_callback"
+        }
+        merchant_request_id = "mpesaref123"
+
+        RequestTask.add_request_task(self.db,user_mpesa_number, slot_code, description, body)
+        Settlement.add_settlement(self.db, end_mpesa_number, slot_code, amount, False, merchant_request_id)
+        
+        summary = AccountSummary.get_acc_summary(self.db, user_mpesa_number)
+        
+        deposit_update = {
+            'total_deposit':1,
+            'pending_settlement':1,
+        }
+        AccountSummary.update_acc_summary(self.db, user_mpesa_number, deposit_update)
+    
+
+    def test_make_settlement(self):
+        summary = AccountSummary.get_acc_summary(self.db, '254703103960')
+        payment_amount=0
+        bal1=3
+
+        summary_update = {
+                'pending_settlement':0,
+                'total_settlement': summary.total_settlement + 1,
+                'amount_settled' : summary.amount_settled + float(payment_amount),
+                'total_amount_saved':summary.total_amount_saved  + float(bal1),
+                'last_amount_saved':summary.last_amount_saved + float(bal1)
+
+            }
+
+
+        pass 
+
+         
 
 if __name__ == '__main__':
-    # Load initial slot quizzes
-    load_slotquizes()
-    # Run the main flow
-    main()
+    unittest.main()

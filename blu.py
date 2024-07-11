@@ -325,5 +325,24 @@ class Session():
                 return False
     
     @staticmethod
-    def complete_sa_slotting(waid):
-        pass 
+    def complete_wd_slotting(waid):
+        print(f"calling complete send_money function")
+        current_ans_payload = Session.load_ans_payload(waid)
+        json_loaded = json.loads(current_ans_payload)
+        print(f"current answer payload is : {json_loaded}, and type is {type(json_loaded)}")
+        payload_length = len(json_loaded)
+        print(f"payload length is  {payload_length}")
+         
+        
+        if payload_length == 2:
+            if json_loaded[0] == json_loaded[1]:
+                print(f"answer is the same")
+                Session.clear_answer_slot(waid)
+                return True
+            else:
+                print(f"answers not the same")
+                return False 
+        
+        if payload_length == 1:
+            print(f"current answer is : {json_loaded[0]}")
+            return False 

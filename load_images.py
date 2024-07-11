@@ -3,11 +3,11 @@ import requests
 
 MEDIA_DIR = 'static/bot_media'
 PHONE_NUMBER_ID = '365548836635602'
-ACCESS_TOKEN = 'EAAUCpth1wAIBO7b7yK8TeHBGQLb2Jox5mKIHZCGFZBUEjDrEiQZCzUNSa5W8JBebGZATZAHVNEyXikeSMvZCXzPlw4g4PSn14ru5ZCZCc8OfIuYYuCSHM0sbpziGGzmFD73b71IhQBkrIthFPeRBo1bhUMIOSEf5Ro5ZCMZAdL9XmUuaR6rZA3ymjBVihnvNLDaieM8d0tQVtNhBiKAHkbGOFfdJ3OQRZC8ZD'
+ACCESS_TOKEN = 'EAAUCpth1wAIBO65uhRqBqKGnTMZAYnUEknmL9SwqgjXvp9ixJQ16phlRLAlct2VNKapiwa9MCHYobqmQinCO4HkZBtbZBB9w8lIfzsXBVAR9gPVLMCvBegyupjkJrGGtchq4DY6V3oGutZBZC165PaYxPF7ry62ImsHx6LdlYyBa0ZBJAtB4F17FKrGmtLAT59kjDs4zyHE6rvehv9T4UR47yAK5wZD'
 FB_GRAPH_URL = f'https://graph.facebook.com/v20.0/{PHONE_NUMBER_ID}/media'
 
-def get_mime_type(image_name):
-    extension = image_name.lower().split('.')[-1]
+def get_mime_type(file_name):
+    extension = file_name.lower().split('.')[-1]
     print(f"Extension is: {extension}")
 
     if extension in ['jpeg', 'jpg']:
@@ -16,15 +16,17 @@ def get_mime_type(image_name):
         return 'image/png'
     elif extension == 'webp':
         return 'image/webp'
+    elif extension == 'mp4':
+        return 'video/mp4'
     else:
         return None
 
-def upload_image(image_path, mime_type):
-    print(f"Uploading file, file_path: {image_path}, mime_type: {mime_type}")
+def upload_media(file_path, mime_type):
+    print(f"Uploading file, file_path: {file_path}, mime_type: {mime_type}")
 
-    with open(image_path, 'rb') as image_file:
+    with open(file_path, 'rb') as media_file:
         files = {
-            'file': (os.path.basename(image_path), image_file, mime_type),
+            'file': (os.path.basename(file_path), media_file, mime_type),
             'type': (None, mime_type),
             'messaging_product': (None, 'whatsapp')
         }
@@ -35,23 +37,23 @@ def upload_image(image_path, mime_type):
         return response.json()
 
 def main():
-    image_ids = {}
-    for image_name in os.listdir(MEDIA_DIR):
-        if image_name.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
-            image_path = os.path.join(MEDIA_DIR, image_name)
-            mime_type = get_mime_type(image_name)
+    media_ids = {}
+    for file_name in os.listdir(MEDIA_DIR):
+        if file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.mp4')):
+            file_path = os.path.join(MEDIA_DIR, file_name)
+            mime_type = get_mime_type(file_name)
             if mime_type:
-                response = upload_image(image_path, mime_type)
+                response = upload_media(file_path, mime_type)
                 if 'id' in response:
-                    image_ids[image_name] = response['id']
+                    media_ids[file_name] = response['id']
                 else:
-                    print(f"Failed to upload {image_name}: {response}")
+                    print(f"Failed to upload {file_name}: {response}")
             else:
-                print(f"Unsupported file type: {image_name}")
+                print(f"Unsupported file type: {file_name}")
         else:
-            print(f"Skipping non-image file: {image_name}")
+            print(f"Skipping non-media file: {file_name}")
 
-    print(image_ids)
+    print(media_ids)
 
 if __name__ == '__main__':
     main()

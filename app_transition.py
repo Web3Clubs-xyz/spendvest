@@ -71,7 +71,6 @@ main_menu_listing = [
         'menu_sticker':'CAACAgIAAxkBAAIE9mZy8gABviXQSyg6H2gk0fG1C4TQrQACbQADpsrIDMzP5klyYCgJNQQ'
     },  
 ]
-
 acc_submenu_listing = [{
     'menu_code':'acc_a',
     'media':['https://ibb.co/M12tDZc'],
@@ -443,12 +442,15 @@ def tele_webhook():
                     new_user_session = Session(uid=generate_uid(),
                                            waid=user_id,
                                            name=user_name,
+
                                            current_menu_code='ST',
                                            answer_payload='[]',
                                            user_flow='',
+
                                            main_menu_browsing=1,
                                            sub_menu_browsing=0,
                                            browsing_count=new_count,
+                                           
                                            is_slot_filling=0,
                                            current_slot_count=0,
                                            slot_quiz_count=len(Menu.load_question_pack('ST')),

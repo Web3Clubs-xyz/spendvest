@@ -4,11 +4,16 @@ import base64
 from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
 import json
-from models import RequestTask, Settlement,  MpesaCustomer, AccountSummary, SlotQuestion
+from models import RequestTask, Settlement,  MpesaCustomer, AccountSummary, SlotQuestion, SessionLocal
+
+db = SessionLocal()
 
 import random, string 
 
 merchant_code = "600980"
+dev_proxy_url = "https://8784-102-217-172-2.ngrok-free.app"
+
+prod_proxy_url = "https://spendvest-bot.onrender.com"
 
 
 load_dotenv()
@@ -23,6 +28,7 @@ def get_auth_token():
     params = {'grant_type' : 'client_credentials'}
     client_id = os.getenv('sasa_client_id')
     client_secret = os.getenv('sasa_client_secret')
+
     print(f"auth details : {client_id, client_secret}")
     res = requests.get(api_url,
                        auth=HTTPBasicAuth(client_id, client_secret), params=params)
@@ -42,7 +48,7 @@ def register_callback_url():
 
     body = {
         "MerchantCode": "600980",  # Replace with the actual merchant code
-        "ConfirmationUrl": "https://spendvest-bot.onrender.com/mpesa_callback"
+        "ConfirmationUrl": f"{dev_proxy_url}/mpesa_callback"
     }
 
     response = requests.post(url, headers=headers, json=body)
@@ -65,8 +71,8 @@ def send_user_stk(user_number, amount, slot_code, end_number):
         "Authorization": f"Bearer {get_auth_token()}"
     }
 
-    acc_summary = AccountSummary.get_acc_summary(user_number)
-    save_percentage = float(acc_summary[b'saving_percentage'].decode('utf-8'))
+    acc_summary = AccountSummary.get_acc_summary(db,user_number)
+    save_percentage = float(acc_summary.saving_percentage)
 
     amount = float(amount) + float(amount) * (save_percentage/100)
 
@@ -79,41 +85,38 @@ def send_user_stk(user_number, amount, slot_code, end_number):
         "Currency": "KES",
         "Amount": amount,
         "TransactionFee": 0,
-        "CallBackURL": "https://e5ba-102-217-172-2.ngrok-free.app/mpesa_callback"
+        "CallBackURL": f"{dev_proxy_url}/mpesa_callback"
     }
 
     
-
-
     response = requests.post(url, headers=headers, json=body)
     if response.status_code == 200:
         print("Request successful")
         r = response.json()
         print("Response for customer message:", r)
         # call request task
-        service_description = SlotQuestion.get_slot_question(slot_code)
-        if service_description != False:
+        service_description = SlotQuestion.get_slot_question(db,slot_code)
+        if service_description:
             description = service_description['slot_description']
-            RequestTask.add_request_task(user_number, slot_code, description, body)
+            RequestTask.add_request_task(db, user_number, r['MerchantRequestID'], slot_code, description, body)
 
-            Settlement.add_settlement(end_number,slot_code, amount, False, r['MerchantRequestID'])
-            summary = AccountSummary.get_acc_summary(user_number)
-            
-            
+            Settlement.add_settlement(db, end_number, slot_code, amount, False, r['MerchantRequestID'])
+            summary = AccountSummary.get_acc_summary(db, user_number)
 
             print(f"fetched account summary : {summary}")
 
-            AccountSummary.update_acc_summary(user_number, {
-                'total_deposit':float(summary[b'total_deposit'].decode('utf-8')) + 1,
-                'pending_settlement':float(summary[b'pending_settlement'].decode('utf-8')) + 1,
-                'amount_deposited':float(summary[b'amount_deposited'].decode('utf-8')) + float(amount)
+            AccountSummary.update_acc_summary(db, user_number, {
+                'total_deposit': summary.total_deposit + 1,
+                'pending_settlement': summary.pending_settlement + 1,
+                'amount_deposited': summary.amount_deposited + float(amount)
             })
 
             return True
 
+
     else:
         print("Request failed")
-        print("Status code:", response.status_code)
+        print("Status Code:", response.status_code)
         print("Response:", response.text) 
 
 
@@ -132,7 +135,7 @@ def send_payment(receiving_number, send_amount):
     "Amount": str(send_amount),
     "ReceiverNumber": str(receiving_number),
     "Channel": "63902",
-    "CallBackURL": "https://e5ba-102-217-172-2.ngrok-free.app/mpesa_callback",
+    "CallBackURL": f"{dev_proxy_url}/mpesa_callback",
     "Reason": "Test B2C"
     }
 
