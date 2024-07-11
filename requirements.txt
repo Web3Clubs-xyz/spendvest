@@ -13,6 +13,7 @@ click==8.1.7
 exceptiongroup==1.2.1
 Flask==3.0.3
 frozenlist==1.4.1
+greenlet==3.0.3
 gunicorn==22.0.0
 h11==0.14.0
 h2==4.1.0
@@ -35,6 +36,7 @@ Quart==0.19.6
 redis==5.0.4
 requests==2.32.3
 six==1.16.0
+SQLAlchemy==2.0.31
 taskgroup==0.0.0a4
 tomli==2.0.1
 twilio==9.1.0
