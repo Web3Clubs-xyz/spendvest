@@ -17,8 +17,8 @@ import re
 load_dotenv()
 
 # Retrieve environment variables
-GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN', "EAAUCpth1wAIBOyyotmxak2nfzghtubHBVVqSf8ppF8MuG4wnMr09lJqhUNZCZBYwzNqBU4MMNqrYEE1cGkd0pSoiSUdK7BFWjDLrxEq9X8gGkBgIMlkZCnZCNA2saLtFKwgZCpZAShcrzYNjWhJWTWnHuUxIBHBiRJVDwYWbaoMfLnzFxVBL4TxLGrVd9tP3hdA8ZAbwgfwJivtCoN626wTDmkjQdEZD")
-WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN', "123456")
+GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN')
+WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN', "M1qEdNAms8tiQETsQfixDexRISyJTgIfr6eHfSCvNESpYmorHXFnhdMtbL3OEYHtcxrCP8KF8Y8Mw9gR5pf6yOiOknT4inMLwgZcH3ximnGW6XukOzlfL9OL")
 PORT = int(os.getenv('PORT', 1000))
 WHATSAPP_API_URL = 'https://graph.facebook.com/v18.0'
 
@@ -291,6 +291,7 @@ async def webhook():
                             try:
                                 AccountSummary.update_acc_summary(db,user_waid, {"saving_percentage":float(user_input)})
                                 
+                                Session.complete_sa_slotting(user_waid)
                                 Session.clear_answer_slot(user_waid)
                                 Session.off_slot_filling(user_waid)
                                 Session.on_main_menu_nav(user_waid, "main_menu_select_home")
@@ -350,6 +351,7 @@ async def webhook():
                                 end_number = json.loads(Session.get_session(user_waid)[b'answer_payload'])[0]
                                 print(f"sending to end number : {end_number}")
                                 send_user_stk(user_waid, user_input, "SM", end_number)
+
                                 Session.complete_sm_slotting(user_waid)                           
                                 Session.clear_answer_slot(user_waid)
                                 Session.off_slot_filling(user_waid)
