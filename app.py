@@ -18,7 +18,7 @@ load_dotenv()
 
 # Retrieve environment variables
 GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN')
-WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN', "M1qEdNAms8tiQETsQfixDexRISyJTgIfr6eHfSCvNESpYmorHXFnhdMtbL3OEYHtcxrCP8KF8Y8Mw9gR5pf6yOiOknT4inMLwgZcH3ximnGW6XukOzlfL9OL")
+WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
 PORT = int(os.getenv('PORT', 1000))
 WHATSAPP_API_URL = 'https://graph.facebook.com/v18.0'
 
