@@ -113,6 +113,7 @@ def get_user_acc_summary_stmt(db, waid, user_name):
             'total_amount_saved': round(float(acc_dict.total_amount_saved),2),
             'last_amount_saved': round(float(acc_dict.last_amount_saved), 2)
         }
+
         return_string = f"""
 =====================================
 User: {user_name}   Saving Percentage : {summary['saving_percentage']}
@@ -1758,7 +1759,7 @@ def process_callback():
 
             AccountSummary.update_acc_summary(db, requested_task.customer_waid, summary_update)
 
-            send_payment(str(end_number), payment_amount)
+            send_payment(str(end_number), float(payment_amount-bal1))
 
     
     return 'ok'
