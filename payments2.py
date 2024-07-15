@@ -11,6 +11,7 @@ db = SessionLocal()
 import random, string 
 
 merchant_code = "600980"
+
 dev_proxy_url = "https://8784-102-217-172-2.ngrok-free.app"
 
 prod_proxy_url = "https://spendvest-bot.onrender.com"
@@ -74,7 +75,7 @@ def send_user_stk(user_number, amount, slot_code, end_number):
     acc_summary = AccountSummary.get_acc_summary(db,user_number)
     save_percentage = float(acc_summary.saving_percentage)
 
-    amount = float(amount) + float(amount) * (save_percentage/100)
+    # amount = float(amount) + float(amount) * (save_percentage/100)
 
     body = {
         "MerchantCode": "600980",

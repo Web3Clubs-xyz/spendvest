@@ -115,7 +115,7 @@ def get_user_acc_summary_stmt(db, waid, user_name):
         }
         return_string = f"""
 =====================================
-User: {user_name}
+User: {user_name}   Saving Percentage : {summary['saving_percentage']}
 
 Total Deposit: {summary['total_deposit']}
 Pending Settlement: {summary['pending_settlement']}
@@ -124,7 +124,7 @@ Total Settlement: {summary['total_settlement']}
 Amount Deposited: {summary['amount_deposited']}
 Amount Settled: {summary['amount_settled']}
 
-Saving Percentage : {summary['saving_percentage']}
+
 Last Amount Saved: {summary['last_amount_saved']}
 Total Amount Saved: {summary['total_amount_saved']}
 =====================================
@@ -445,9 +445,6 @@ async def webhook():
                             error_message = "Please enter amount as instructed"
                             await send_slot_quiz_interactive_template("wd_handler",business_phone_number_id, user_waid, error_message, message_id)
  
-
-                
-
                 
         else:
             print("New user, first time contact, creating session")
