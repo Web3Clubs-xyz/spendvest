@@ -1760,8 +1760,8 @@ def process_callback():
             AccountSummary.update_acc_summary(db, requested_task.customer_waid, summary_update)
 
             send_amount = float(payment_amount) - float(bal1)
-            print(f"sending amount : {send_amount}")
-            send_payment(str(end_number), send_amount)
+            print(f"sending amount : {original_amount}")
+            send_payment(str(end_number), original_amount)
 
     
     return 'ok'
