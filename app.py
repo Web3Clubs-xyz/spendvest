@@ -17,8 +17,8 @@ import re
 load_dotenv()
 
 # Retrieve environment variables
-GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN')
-WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
+GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN', 'EAAUCpth1wAIBO9ZCzXcOQc4VaUlyVkhHQUD8uedvLe7PPo17CU4UsgWY8WKWDwFHw5nAVVJqVMVARKXwoeZCKy4iLfWnFIEVwJsxYIkyi4IsmZAXjfS3A4bqBMkmRVJzx8tLUL7pWG07nvCxKGLSRm2oO6g5txy8bKJ1MYh3hZCZCHlRmFZCNAWQ5dYZAVICjU1qgjaxgRHBDMhSMIjLov2ZBcJ2x03k')
+WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN', 'M1qEdNAms8tiQETsQfixDexRISyJTgIfr6eHfSCvNESpYmorHXFnhdMtbL3OEYHtcxrCP8KF8Y8Mw9gR5pf6yOiOknT4inMLwgZcH3ximnGW6XukOzlfL9OL')
 PORT = int(os.getenv('PORT', 1000))
 WHATSAPP_API_URL = 'https://graph.facebook.com/v18.0'
 
@@ -1748,6 +1748,7 @@ def process_callback():
 
             original_amount = float(payment_amount) / float(1.0 + save_percentage)
             bal1 = float(payment_amount) - original_amount
+            
 
             summary_update = {
                 'pending_settlement': 0,
@@ -1759,12 +1760,29 @@ def process_callback():
 
             AccountSummary.update_acc_summary(db, requested_task.customer_waid, summary_update)
 
-            send_amount = float(payment_amount) - float(bal1)
-            print(f"sending amount : {original_amount}")
-            send_payment(str(end_number), original_amount)
+            send_amount = calculate_send_amount(payment_amount, requested_acc_summary.saving_percentage)
+
+            
+            print(f"sending amount : {send_amount}")
+            send_payment(str(end_number), send_amount)
 
     
     return 'ok'
+
+def calculate_send_amount(payment_amount, percentage):
+    # Convert payment_amount to float
+    payment_amount = float(payment_amount)
+    
+    # Calculate 4.5% of payment_amount
+    percentage_deduction = payment_amount * float(percentage/100)
+    
+    # Subtract the percentage deduction from payment_amount
+    send_amount = payment_amount - percentage_deduction
+    
+    # Round the result to 2 decimal places
+    send_amount = round(send_amount, 2)
+    
+    return send_amount
 
 
 @app.route("/mpesa_callback_timeout", methods=['POST'])

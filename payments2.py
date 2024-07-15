@@ -12,7 +12,7 @@ import random, string
 
 merchant_code = "600980"
 
-dev_proxy_url = "https://8784-102-217-172-2.ngrok-free.app"
+dev_proxy_url = "https://136c-102-217-172-2.ngrok-free.app"
 
 prod_proxy_url = "https://spendvest-bot.onrender.com"
 
@@ -49,7 +49,7 @@ def register_callback_url():
 
     body = {
         "MerchantCode": "600980",  # Replace with the actual merchant code
-        "ConfirmationUrl": f"{prod_proxy_url}/mpesa_callback"
+        "ConfirmationUrl": f"{dev_proxy_url}/mpesa_callback"
     }
 
     response = requests.post(url, headers=headers, json=body)
@@ -86,7 +86,7 @@ def send_user_stk(user_number, amount, slot_code, end_number):
         "Currency": "KES",
         "Amount": amount,
         "TransactionFee": 0,
-        "CallBackURL": f"{prod_proxy_url}/mpesa_callback"
+        "CallBackURL": f"{dev_proxy_url}/mpesa_callback"
     }
 
     
@@ -136,7 +136,7 @@ def send_payment(receiving_number, send_amount):
     "Amount": str(send_amount),
     "ReceiverNumber": str(receiving_number),
     "Channel": "63902",
-    "CallBackURL": f"{prod_proxy_url}/mpesa_callback",
+    "CallBackURL": f"{dev_proxy_url}/mpesa_callback",
     "Reason": "Test B2C"
     }
 
