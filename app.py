@@ -110,8 +110,8 @@ def get_user_acc_summary_stmt(db, waid, user_name):
             'amount_deposited': acc_dict.amount_deposited,
             'amount_settled': acc_dict.amount_settled,
             'saving_percentage':acc_dict.saving_percentage,
-            'total_amount_saved': float(acc_dict.total_amount_saved),
-            'last_amount_saved': float(acc_dict.last_amount_saved)
+            'total_amount_saved': round(float(acc_dict.total_amount_saved),2),
+            'last_amount_saved': round(float(acc_dict.last_amount_saved), 2)
         }
         return_string = f"""
 =====================================
