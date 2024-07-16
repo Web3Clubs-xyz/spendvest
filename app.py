@@ -1766,22 +1766,30 @@ def process_callback():
             print(f"sending amount : {send_amount}")
             send_payment(str(end_number), send_amount)
 
-    
     return 'ok'
+
 
 def calculate_send_amount(payment_amount, percentage):
     # Convert payment_amount to float
     payment_amount = float(payment_amount)
     
     # Calculate 4.5% of payment_amount
-    # percentage_deduction = payment_amount * 100/float(percentage)
+    # methodology; if 145% == payment_amount, what about 100%
+    amount = (100 * payment_amount)/(100+percentage)
+    print(f"calculated amount is : {amount}")
+
+    # percentage_deduction = payment_amount * 100/percentage
+    # print(f"percentage deduction : {percentage_deduction}")
     
     # # Subtract the percentage deduction from payment_amount
     # send_amount = payment_amount - percentage_deduction
-    original_amount = float(payment_amount*100)/float(1+percentage)
+    # print(f"send_amount after deductions, {send_amount}")
+    # # original_amount = float(payment_amount*100)/float(1+percentage)
 
     # Round the result to 2 decimal places
-    send_amount = round(original_amount, 2)
+    send_amount = round(amount, 2)
+
+    print(f"rounded amount is : {send_amount}")
     
     return send_amount
 
