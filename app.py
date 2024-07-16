@@ -1774,13 +1774,14 @@ def calculate_send_amount(payment_amount, percentage):
     payment_amount = float(payment_amount)
     
     # Calculate 4.5% of payment_amount
-    percentage_deduction = payment_amount * float(percentage/100)
+    # percentage_deduction = payment_amount * 100/float(percentage)
     
-    # Subtract the percentage deduction from payment_amount
-    send_amount = payment_amount - percentage_deduction
-    
+    # # Subtract the percentage deduction from payment_amount
+    # send_amount = payment_amount - percentage_deduction
+    original_amount = float(payment_amount*100)/float(1+percentage)
+
     # Round the result to 2 decimal places
-    send_amount = round(send_amount, 2)
+    send_amount = round(original_amount, 2)
     
     return send_amount
 
