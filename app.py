@@ -17,8 +17,8 @@ import re
 load_dotenv()
 
 # Retrieve environment variables
-GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN', 'EAAUCpth1wAIBO9ZCzXcOQc4VaUlyVkhHQUD8uedvLe7PPo17CU4UsgWY8WKWDwFHw5nAVVJqVMVARKXwoeZCKy4iLfWnFIEVwJsxYIkyi4IsmZAXjfS3A4bqBMkmRVJzx8tLUL7pWG07nvCxKGLSRm2oO6g5txy8bKJ1MYh3hZCZCHlRmFZCNAWQ5dYZAVICjU1qgjaxgRHBDMhSMIjLov2ZBcJ2x03k')
-WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN', 'M1qEdNAms8tiQETsQfixDexRISyJTgIfr6eHfSCvNESpYmorHXFnhdMtbL3OEYHtcxrCP8KF8Y8Mw9gR5pf6yOiOknT4inMLwgZcH3ximnGW6XukOzlfL9OL')
+GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN')
+WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
 PORT = int(os.getenv('PORT', 1000))
 WHATSAPP_API_URL = 'https://graph.facebook.com/v18.0'
 
@@ -1745,17 +1745,18 @@ def process_callback():
             print(f"end_number : {end_number}")
             print(f"payment amount : {payment_amount}")
             # update acc summary, for pending settlements, total settlements, amount settled, total amount saved and last amount saved
-
-            original_amount = float(payment_amount) / float(1.0 + save_percentage)
-            bal1 = float(payment_amount) - original_amount
+            # get acc summary
             
+            original_amount = float(payment_amount) / float(1.0 + save_percentage)
+            bal1 = float(payment_amount) - calculate_send_amount(payment_amount, save_percentage)
+            print(f"current depo save  is : {bal1}")
 
             summary_update = {
                 'pending_settlement': 0,
                 'total_settlement': requested_acc_summary.total_settlement + 1,
                 'amount_settled': requested_acc_summary.amount_settled + float(payment_amount),
                 'total_amount_saved': requested_acc_summary.total_amount_saved + float(bal1),
-                'last_amount_saved': requested_acc_summary.total_amount_saved + float(bal1)
+                'last_amount_saved': float(bal1)
             }
 
             AccountSummary.update_acc_summary(db, requested_task.customer_waid, summary_update)
