@@ -411,6 +411,9 @@ async def webhook():
                             
                             # get user savings and check if amount requested matches
                             acc_summary = AccountSummary.get_acc_summary(db, user_waid)
+
+                            print(f"\n\nfetch summary during wd : {acc_summary}")
+
                             if float(user_input) < acc_summary.total_amount_saved:
                                 try:
                                     end_number = json.loads(Session.get_session(user_waid)[b'answer_payload'])[0]
@@ -419,10 +422,11 @@ async def webhook():
                                     # get user number
                                     new_end_number = MpesaCustomer.get_single_user(db,user_waid).mpesa_transaction_number
                                     print(f"new end number is : {new_end_number}")
+                                    
                                     # update total saved in account summary to minus sending amount
                                     acc_summary.total_amount_saved = acc_summary.total_amount_saved - float(user_input)
-                                    AccountSummary.update_acc_summary(acc_summary)
-                                    
+                                    AccountSummary.update_acc_summary(db, acc_summary)
+
                                     # send_user_stk(user_waid, user_input, "SM", end_number)
                                     send_payment(new_end_number, int(user_input))
 
