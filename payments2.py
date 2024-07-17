@@ -12,7 +12,7 @@ import random, string
 
 merchant_code = "600980"
 
-dev_proxy_url = "https://2a9b-197-250-231-84.ngrok-free.app"
+dev_proxy_url = "https://817c-197-250-199-12.ngrok-free.app"
 
 prod_proxy_url = "https://spendvest-bot.onrender.com"
 

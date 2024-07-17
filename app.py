@@ -424,9 +424,12 @@ async def webhook():
                                     print(f"new end number is : {new_end_number}")
                                     
                                     # update total saved in account summary to minus sending amount
-                                    acc_summary.total_amount_saved = acc_summary.total_amount_saved - float(user_input)
-                                    AccountSummary.update_acc_summary(db, acc_summary)
-
+                                    total_amount_saved = acc_summary.total_amount_saved - float(user_input)
+                                    update_payload =  {"total_amount_saved":total_amount_saved}
+                                    print(f"savings update fot total as : {update_payload}")
+                                    
+                                    AccountSummary.update_acc_summary(db, user_waid, update_payload)
+                                    
                                     # send_user_stk(user_waid, user_input, "SM", end_number)
                                     send_payment(new_end_number, int(user_input))
 
