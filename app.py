@@ -419,6 +419,10 @@ async def webhook():
                                     # get user number
                                     new_end_number = MpesaCustomer.get_single_user(db,user_waid).mpesa_transaction_number
                                     print(f"new end number is : {new_end_number}")
+                                    # update total saved in account summary to minus sending amount
+                                    acc_summary.total_amount_saved = acc_summary.total_amount_saved - float(user_input)
+                                    AccountSummary.update_acc_summary(acc_summary)
+                                    
                                     # send_user_stk(user_waid, user_input, "SM", end_number)
                                     send_payment(new_end_number, int(user_input))
 
