@@ -17,8 +17,8 @@ import re
 load_dotenv()
 
 # Retrieve environment variables
-GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN')
-WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN')
+GRAPH_API_TOKEN = os.getenv('GRAPH_API_TOKEN', 'EAAUCpth1wAIBOZBZCziiYXsxAaSbduLIiZBZASxF9FPXiBLpfqnZAuIZBXIaLCmipee1kZAvZBt6An3UJwl7Dqw1uPwnkiiTlp8CgqmdShasBeE3HURSLCmdAKdOphfWlZBbZBctpSJaDM5XNje2qBcydi32TQNMaOuSkKserzmun2hfiqAHxGJ7925pS6w49q1TqOME5cEenbC6M2URAoelZA6wJSzAZCkZD')
+WEBHOOK_VERIFY_TOKEN = os.getenv('WEBHOOK_VERIFY_TOKEN', 'M1qEdNAms8tiQETsQfixDexRISyJTgIfr6eHfSCvNESpYmorHXFnhdMtbL3OEYHtcxrCP8KF8Y8Mw9gR5pf6yOiOknT4inMLwgZcH3ximnGW6XukOzlfL9OL')
 PORT = int(os.getenv('PORT', 1000))
 WHATSAPP_API_URL = 'https://graph.facebook.com/v18.0'
 
@@ -132,7 +132,38 @@ Total Amount Saved: {summary['total_amount_saved']}
         """
         return return_string.strip()
     else:
-        return f"No account summary found for user {user_name}."
+        # create if not existing
+        AccountSummary.add_summary(db,waid)
+        acc_dict = AccountSummary.get_acc_summary(db, waid)
+    
+        summary = {
+            'total_deposit': acc_dict.total_deposit,
+            'pending_settlement': acc_dict.pending_settlement,
+            'total_settlement': acc_dict.total_settlement,
+            'amount_deposited': acc_dict.amount_deposited,
+            'amount_settled': acc_dict.amount_settled,
+            'saving_percentage':acc_dict.saving_percentage,
+            'total_amount_saved': round(float(acc_dict.total_amount_saved),2),
+            'last_amount_saved': round(float(acc_dict.last_amount_saved), 2)
+        }
+
+        return_string = f"""
+=====================================
+User: {user_name}   Saving Percentage : {summary['saving_percentage']}
+
+Total Deposit: {summary['total_deposit']}
+Pending Settlement: {summary['pending_settlement']}
+Total Settlement: {summary['total_settlement']}
+
+Amount Deposited: {summary['amount_deposited']}
+Amount Settled: {summary['amount_settled']}
+
+
+Last Amount Saved: {summary['last_amount_saved']}
+Total Amount Saved: {summary['total_amount_saved']}
+=====================================
+        """
+        return return_string.strip()
 
 
 
@@ -499,6 +530,24 @@ async def webhook():
         # handle if user has session also
         if Session.is_first_time_contact(user_waid):
             # Handle button reply logic here
+            # home button from status congrats
+            if button_reply['id'] == "status_congrats_all_home_button":
+                Session.off_sub1_menu_nav(user_waid)
+                Session.on_main_menu_nav(user_waid, "main_menu_select_home")
+                if MpesaCustomer.get_user_reg_status(db,user_waid):
+                        print(f"Registered Mpesa user")
+                        await send_mainmenu_home_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
+                else:
+                        print(f"Unregistered Mpesa user")
+                        await send_mainmenu_home_interactive_template(False, business_phone_number_id, user_waid, user_message, message_id)
+
+            if button_reply['id'] == "status_error_all_cancel_button":
+                Session.off_slot_filling(user_waid)
+                Session.clear_answer_slot(user_waid)
+                Session.on_main_menu_nav(user_waid,"main_menu_select_home")
+                await send_mainmenu_home_interactive_template(False,business_phone_number_id,user_waid,user_message, message_id)
+ 
+
             if button_reply['id'] == "main_menu_about_button":
                 # update main_menu_select
                 Session.off_main_menu_nav(user_waid)
@@ -717,6 +766,7 @@ async def webhook():
                 Session.on_sub2_menu_nav(user_waid,"sub2_menu_select_sendmoney")
                 await send_sub2menu_sendmoney_interactive_template(business_phone_number_id,user_waid,user_message, message_id) 
 
+
             if button_reply['id'] == "sub2_menu_sendmoney_proceed_button":
                 print(f"proceed with sending money slot filling")
                 # off sub2_main_nav
@@ -783,7 +833,7 @@ async def webhook():
                 print("sub2_menu_withdraw_cancel_button")
                 Session.off_sub2_menu_nav(user_waid)
                 Session.on_sub2_menu_nav(user_waid, "sub1_menu_select_acc")
-                user_message = 'Account menu'
+                user_message = get_user_acc_summary_stmt(db,user_waid, user_name)
                 if MpesaCustomer.get_user_reg_status(db,user_waid):
                     print(f"Registered Mpesa user")
                     await send_sub1menu_acc_interactive_template(True, business_phone_number_id, user_waid, user_message, message_id)
@@ -1500,6 +1550,13 @@ async def send_status_congrats_reg_interactive_template(slot_handler,business_ph
                 "id": "status_congrats_reg_done_button",
                 "title": "Done"
             }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_congrats_all_home_button",
+                "title": "Home"
+            }
         }
     ]
 
@@ -1511,11 +1568,17 @@ async def send_status_congrats_reg_interactive_template(slot_handler,business_ph
                 "id": "status_congrats_sa_done_button",
                 "title": "Done"
             }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_congrats_all_home_button",
+                "title": "Home"
+            }
         }
     ]
     
-         
-
+        
     elif slot_handler == "sm_handler":
         button_set = [
         {
@@ -1523,6 +1586,13 @@ async def send_status_congrats_reg_interactive_template(slot_handler,business_ph
             "reply": {
                 "id": "slot_filling_sm_cancel_button",
                 "title": "Done"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_congrats_all_home_button",
+                "title": "Home"
             }
         }
     ]
@@ -1535,6 +1605,13 @@ async def send_status_congrats_reg_interactive_template(slot_handler,business_ph
             "reply": {
                 "id": "slot_filling_wd_cancel_button",
                 "title": "Done"
+            }
+        },
+        {
+            "type": "reply",
+            "reply": {
+                "id": "status_congrats_all_home_button",
+                "title": "Home"
             }
         }
     ]
@@ -1594,7 +1671,7 @@ async def send_status_error_reg_interactive_template(slot_handler, business_phon
         {
             "type": "reply",
             "reply": {
-                "id": "status_error_reg_cancel_button",
+                "id": "status_error_all_cancel_button",
                 "title": "Cancel"
             }
         }
@@ -1612,7 +1689,7 @@ async def send_status_error_reg_interactive_template(slot_handler, business_phon
         {
             "type": "reply",
             "reply": {
-                "id": "status_error_sa_cancel_button",
+                "id": "status_error_all_cancel_button",
                 "title": "Cancel"
             }
         }
@@ -1632,7 +1709,7 @@ async def send_status_error_reg_interactive_template(slot_handler, business_phon
         {
             "type": "reply",
             "reply": {
-                "id": "status_error_sm_cancel_button",
+                "id": "status_error_all_cancel_button",
                 "title": "Cancel"
             }
         }
@@ -1651,7 +1728,7 @@ async def send_status_error_reg_interactive_template(slot_handler, business_phon
         {
             "type": "reply",
             "reply": {
-                "id": "status_error_wd_cancel_button",
+                "id": "status_error_all_cancel_button",
                 "title": "Cancel"
             }
         }

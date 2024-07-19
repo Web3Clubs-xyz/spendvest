@@ -13,7 +13,5 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 # Make port 5000 available to the world outside this container
 EXPOSE 80
 
-# Define the command to run the Flask application
-# CMD ["python", "/app/app.py"]
-
-CMD ["gunicorn", "app:app"]
+# Check if site.db exists, if not, create it by executing models.py, then run the Flask application using Gunicorn
+CMD ["sh", "-c", "if [ ! -f /app/site.db ]; then python3 /app/models.py; fi && gunicorn app:app"]

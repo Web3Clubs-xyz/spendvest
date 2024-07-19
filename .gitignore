@@ -13,3 +13,6 @@ __pycache__/*
 # Ignore additional files (optional, add as needed)
 *.pyc
 *.pyo
+
+# Ignore SQLite database file
+site.db
