@@ -5,7 +5,8 @@ venv/*
 __pycache__/*
 
 # Ignore environment variables file
-.env
+.env.development
+.env.production
 
 # Ignore macOS system files (optional, but often useful)
 .DS_Store
@@ -13,3 +14,6 @@ __pycache__/*
 # Ignore additional files (optional, add as needed)
 *.pyc
 *.pyo
+
+# scratchpad
+scratchpad.md
