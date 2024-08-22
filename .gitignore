@@ -17,3 +17,6 @@ __pycache__/*
 
 # scratchpad
 scratchpad.md
+
+# logs
+logs/*

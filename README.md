@@ -60,6 +60,15 @@ git clone gh repo clone Web3Clubs-xyz/spendvest
 gh repo clone Web3Clubs-xyz/spendvest
 ```
 
+### Logging
+
+Spendvest is set up to send logs as json to files in src/logs. Ensure this
+`logs` folder is created. You can run this at the root of the project.
+
+```
+mkdir src/logs
+```
+
 ### Installing Dependencies 🚸
 
 change directory to the cloned repo folder
@@ -106,6 +115,29 @@ export ENVIRONMENT="development"
 ```
 
 and copy the `.env` template file to `.env.development`
+
+These are the environment variables you need to set up for spendvest
+
+|Name|Description|Example|Datatype|
+|===|===|===|===|
+|FACEBOOK_ENDPOINT_BASE_URL||||
+|FACEBOOK_APP_ID||||
+|FACEBOOK_APP_SECRET||||
+|WHATSAPP_ACCESS_TOKEN||||
+|WHATSAPP_BUSINESS_ACCOUNT_ID||||
+|WHATSAPP_PHONE_NUMBER_ID||||
+|SASAPAY_PERSONAL_ONBOARDING_ENDPOINT||||
+|SASAPAY_REQUEST_PAYMENT_ENDPOINT||||
+|SASAPAY_TRANSFER_FUNDS_ENDPOINT||||
+|SASAPAY_CLIENT_ID||||
+|SASAPAY_CLIENT_SECRET||||
+|SASAPAY_MERCHANT_CODE||||
+|MYSQL_DATABASE_USER||||
+|MYSQL_DATABASE_PASSWORD||||
+|MYSQL_DATABASE_HOST||||
+|MYSQL_DATABASE_NAME||||
+|SPENDVEST_SITE_URL||||
+|LOG_DIR||||
 
 For niche or advanced use cases, you can modify the `/src/composition_root.py`
 file and define where Spendvest will look for your custom environment

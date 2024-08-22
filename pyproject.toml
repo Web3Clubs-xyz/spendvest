@@ -1,23 +1,24 @@
 [tool.poetry]
 name = "spendvest"
 version = "0.1.0"
-description = "spendvest helps mobile money users save money while spending"
-authors = ["ong3r1, garfieldotieno"]
+description = ""
+authors = ["ong3ri"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
-fastapi = "^0.111.1"
+aiohttp = "^3.10.3"
+APScheduler = "^3.10.4"
 dependency-injector = "^4.41.0"
-aiohttp = "^3.9.5"
-sqlalchemy = {extras = ["asyncio"], version = "^2.0.31"}
-aiomysql = "^0.2.0"
+fastapi = "^0.112.0"
+SQLAlchemy = "^2.0.32"
+alembic = "^1.13.2"
 python-dotenv = "^1.0.1"
-uvicorn = "^0.30.5"
-apscheduler = "^3.10.4"
+aioresponses = "^0.7.6"
+uvicorn = "^0.30.6"
+cryptography = "^43.0.0"
 
-[tool.poetry.scripts]
-spendvest = "src.main:app"
 
 [build-system]
 requires = ["poetry-core"]
