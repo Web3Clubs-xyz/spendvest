@@ -1,6 +1,8 @@
 from logging.config import fileConfig
+import os
 
-from sqlalchemy import engine_from_config
+from dotenv import load_dotenv
+from sqlalchemy import create_engine  # , engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
@@ -38,7 +40,29 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+
+    # Here we are loading the environment variables that are needed to create
+    # migration scripts.
+    environment = os.getenv("ENVIRONMENT", "development").lower()
+
+    if environment == "development":
+        dotenv_path = os.path.join(os.path.dirname(__file__), ".env.development")
+        load_dotenv(dotenv_path=dotenv_path)
+    elif environment == "production":
+        dotenv_path = os.path.join(os.path.dirname(__file__), ".env.production")
+        load_dotenv(dotenv_path=dotenv_path)
+
+    # Create a synchronous engine using create_engine
+
+    database_user = os.environ.get("MYSQL_DATABASE_USER")
+    database_password = os.environ.get("MYSQL_DATABASE_PASSWORD")
+    database_host = os.environ.get("MYSQL_DATABASE_HOST")
+    database_name = os.environ.get("MYSQL_DATABASE_NAME")
+    url = (
+        f"mysql+pymysql://{database_user}:"
+        f"{database_password}@{database_host}:3306/{database_name}"
+    )
+
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -57,12 +81,43 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    # This uses our async engine and fails
+    # connectable = engine_from_config(
+    #     config.get_section(config.config_ini_section, {}),
+    #     prefix="sqlalchemy.",
+    #     poolclass=pool.NullPool,
+    # )
+
+    # Here we are loading the environment variables that are needed to create
+    # migration scripts.
+    environment = os.getenv("ENVIRONMENT", "development").lower()
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
+
+    if environment == "development":
+        dotenv_path = os.path.join(parent_dir, ".env.development")
+        load_dotenv(dotenv_path=dotenv_path)
+    elif environment == "production":
+        dotenv_path = os.path.join(parent_dir, ".env.production")
+        load_dotenv(dotenv_path=dotenv_path)
+
+    # Create a synchronous engine using create_engine
+
+    database_user = os.environ.get("MYSQL_DATABASE_USER")
+    database_password = os.environ.get("MYSQL_DATABASE_PASSWORD")
+    database_host = os.environ.get("MYSQL_DATABASE_HOST")
+    database_name = os.environ.get("MYSQL_DATABASE_NAME")
+    url = (
+        f"mysql+pymysql://{database_user}:"
+        f"{database_password}@{database_host}:3306/{database_name}"
+    )
+    print(url)
+
+    connectable = create_engine(
+        url,
         poolclass=pool.NullPool,
     )
-
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
 

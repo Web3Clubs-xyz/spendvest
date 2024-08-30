@@ -90,6 +90,7 @@ class PaymentEventsPublisher:
 
         if event_id in self._events:
             self._events[event_id].set()
+            del self._events[event_id]
         else:
             print(f"Warning: Received callback for unknown event with id {event_id}")
 

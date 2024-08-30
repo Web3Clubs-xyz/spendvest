@@ -1,13 +1,9 @@
 from abc import ABC, abstractmethod
-from typing_extensions import Any, Dict
 
-from domain.entities.payments import IWallet
-from domain.entities.services.wallet_service import IWalletService
 from domain.entities.users import Customer
 from domain.usecases.interfaces.register_account_interfaces import (
     IRegistrationEventObserver,
 )
-from interface_adapters.datastore.wallet_repository import IWalletCreationStrategy
 
 
 class IPaymentGateway(ABC):
@@ -108,10 +104,4 @@ class IPaymentGatewayFactory(ABC):
 class IWalletPaymentGatewayFactory(ABC):
     @abstractmethod
     def create_wallet_payment_gateway(self, **kwargs) -> IWalletPaymentGateway:
-        pass
-
-
-class IWalletRepository(ABC):
-    @abstractmethod
-    async def save_wallet(self, wallet: IWallet) -> IWallet:
         pass

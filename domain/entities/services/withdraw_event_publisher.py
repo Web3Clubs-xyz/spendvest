@@ -7,88 +7,77 @@ from domain.entities.sessions import UserSession
 
 
 @dataclass
-class SendMoneyTransactionInputRequired:
+class WithdrawInputRequired:
     input_name: str
     prompt_recepient: str
 
 
 @dataclass
-class SendMoneyTransactionInputReceived:
+class WithdrawInputReceived:
     input_name: str
     user_input: Dict
 
 
 @dataclass
-class SendMoneyUserPrompt:
+class WithdrawUserPrompt:
     event_name: str
     prompt_recepient: str
     data: Optional[Dict] = None
 
 
 @dataclass
-class SendMoneyTransactionFailed:
+class WithdrawFailed:
     prompt_recepient: str
-    reason: str
 
 
 @dataclass
-class SendMoneyError:
-    error: Exception
-
-
-@dataclass
-class SendMoneyTransactionCompleted:
+class WithdrawCompleted:
     pass
 
 
-class ISendMoneyObserver(ABC):
+class IWithdrawObserver(ABC):
     @abstractmethod
     async def update(self, event: object) -> None:
         pass
 
 
 @dataclass
-class SendMoneyEventsPublisher:
+class WithdrawEventsPublisher:
     """
     Manages communication between components that are communicating during the
-    send money process.
+    withdrawal process.
     """
 
     logger: Logger
-    observers: List[ISendMoneyObserver] = field(default_factory=list)
+    observers: List[IWithdrawObserver] = field(default_factory=list)
 
-    def subscribe(self, observer: ISendMoneyObserver) -> None:
+    def subscribe(self, observer: IWithdrawObserver) -> None:
         self.observers.append(observer)
 
-    def unsubscribe(self, observer: ISendMoneyObserver):
+    def unsubscribe(self, observer: IWithdrawObserver):
         self.observers.remove(observer)
 
     async def notify(self, event: object):
         self.logger.info(f"Notifying {len(self.observers)}")
-
-        try:
-            for observer in self.observers:
-                await observer.update(event)
-        except Exception as e:
-            self.logger.error(f"There was an error while sending money {str(e)}")
-            await self.notify(event=SendMoneyError(error=e))
+        for observer in self.observers:
+            await observer.update(event)
 
     async def start(self, session: UserSession) -> None:
         if session.user is None:
-            self.logger.warning("Unregistered user sending money.")
-            raise ValueError("Unregistered user sending money.")
+            self.logger.warning("Unregistered user withdrawing money.")
+            raise ValueError("Unregistered user withdrawing money.")
 
         username = session.user.first_name + " " + session.user.last_name
         self.logger.info(
-            "Starting send money process.",
+            "Starting withdraw process.",
             extra={
-                "class": "SendMoneyEventsPublisher",
+                "class": "WithdrawEventsPublisher",
                 "session": session.id,
                 "user": username,
             },
         )
         await self.notify(
-            event=SendMoneyUserPrompt(
-                event_name="send_money_info", prompt_recepient=session.id
+            event=WithdrawUserPrompt(
+                event_name="withdraw_info", prompt_recepient=session.id
             )
         )

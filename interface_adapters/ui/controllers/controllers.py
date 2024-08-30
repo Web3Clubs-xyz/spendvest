@@ -1,40 +1,66 @@
 from dataclasses import dataclass
 from typing import Dict
+from typing_extensions import override
 from domain.entities.services.registration_event_publisher import (
     RegistrationEventsPublisher,
     RegistrationInputReceived,
     RegistrationInputRequired,
 )
 from domain.entities.services.send_money_events_publisher import (
+    ISendMoneyObserver,
     SendMoneyEventsPublisher,
     SendMoneyTransactionInputReceived,
     SendMoneyTransactionInputRequired,
 )
+from domain.entities.services.withdraw_event_publisher import (
+    IWithdrawObserver,
+    WithdrawEventsPublisher,
+    WithdrawInputReceived,
+    WithdrawInputRequired,
+)
 from domain.entities.sessions import UserSession
+from domain.usecases.interfaces.register_account_interfaces import (
+    IRegistrationEventObserver,
+)
 from domain.usecases.invalid_input import InvalidInputUseCase
 from domain.usecases.new_session import NewSessionUseCase
 from domain.usecases.register_account import (
-    RegisterCustomerAccountUseCase,
+    RegisterCustomerAccountUseCaseFactory,
 )
 from domain.usecases.send_money import (
-    SendMoneyUseCase,
+    SendMoneyUseCaseFactory,
 )
-from domain.usecases.withdraw import WithdrawUseCase
+from domain.usecases.withdraw import WithdrawUseCaseFactory
 from interface_adapters.ui.controllers.session_event_publisher import (
     ControllerEventPublisher,
 )
 
 
 @dataclass
-class RegistrationController:
-    registration_use_case: RegisterCustomerAccountUseCase
+class RegistrationController(IRegistrationEventObserver):
+    registration_use_case_factory: RegisterCustomerAccountUseCaseFactory
     controller_event_publisher: ControllerEventPublisher
     registration_event_publisher: RegistrationEventsPublisher
 
+    def __init__(
+        self,
+        registration_use_case_factory: RegisterCustomerAccountUseCaseFactory,
+        controller_event_publisher: ControllerEventPublisher,
+        registration_event_publisher: RegistrationEventsPublisher,
+    ):
+        self.registration_use_case_factory = registration_use_case_factory
+        self.controller_event_publisher = controller_event_publisher
+        self.registration_event_publisher = registration_event_publisher
+
     async def register_user(self, session: UserSession) -> None:
-        await self.registration_use_case.register(session=session)
+        self.registration_event_publisher.subscribe(self)
+        use_case = self.registration_use_case_factory.create(
+            registration_event_publisher=self.registration_event_publisher
+        )
+        await use_case.register(session=session)
 
     async def emit_event(self, session: UserSession, data: Dict) -> None:
+        print("Emitting information in controller")
         step = session.current_step
 
         match step:
@@ -60,19 +86,16 @@ class RegistrationController:
             isinstance(event, RegistrationInputRequired)
             and event.input_name == "registration_info"
         ):
-            # We should create an event type for "registration_info" and wait
-            # for it. Thie means that the controller event publisher should
-            # check the session of the messages coming in and generate a
-            # registration_info event type and attach the sender's id so we can
-            # receive it here.
             self.controller_event_publisher.create_event(
                 event_id=event.prompt_recepient
             )
 
+            print("Waiting for registration info")
             registration_info = await self.controller_event_publisher.wait_for_event(
                 event_id=event.prompt_recepient
             )
 
+            print("Controller sending registration_info")
             await self.registration_event_publisher.notify(
                 event=RegistrationInputReceived(
                     input_name="registration_info",
@@ -83,17 +106,12 @@ class RegistrationController:
         if isinstance(event, RegistrationInputRequired) and (
             event.input_name == "otp" or event.input_name == "otp_failed"
         ):
-            # We should create an event type for "otp" or "otp_failed" and wait
-            # for it. Thie means that the controller event publisher should
-            # check the session of the messages coming in and generate a
-            # registration_info event type and attach the sender's id so we can
-            # receive it here.
             self.controller_event_publisher.create_event(
                 event_id=event.prompt_recepient
             )
 
             otp = await self.controller_event_publisher.wait_for_event(
-                event_id=event.prompt_recepient, timeout=False
+                event_id=event.prompt_recepient
             )
 
             await self.registration_event_publisher.notify(
@@ -104,18 +122,23 @@ class RegistrationController:
 
 
 @dataclass
-class SendMoneyController:
-    use_case: SendMoneyUseCase
+class SendMoneyController(ISendMoneyObserver):
+    use_case_factory: SendMoneyUseCaseFactory
     controller_event_publisher: ControllerEventPublisher
     send_money_event_publisher: SendMoneyEventsPublisher
 
     async def send_money(self, session: UserSession) -> None:
-        await self.use_case.send_money(
+        use_case = self.use_case_factory.create(
+            send_money_events_publisher=self.send_money_event_publisher
+        )
+        self.send_money_event_publisher.subscribe(observer=self)
+        await use_case.send_money(
             session=session,
         )
 
     async def update(self, event: object) -> None:
         if isinstance(event, SendMoneyTransactionInputRequired):
+            print("Requiring transaction input.")
             session_id = event.prompt_recepient
             input_name = event.input_name
 
@@ -124,24 +147,32 @@ class SendMoneyController:
                     self.controller_event_publisher.create_event(event_id=session_id)
                     send_money_input = (
                         await self.controller_event_publisher.wait_for_event(
-                            event_id=session_id, timeout=None
+                            event_id=session_id
                         )
                     )
+                    print(f"Got send money input {send_money_input}")
 
                     if send_money_input is None:
                         # Prompt user the input wasn't received
                         return
 
-                    await self.send_money_event_publisher.notify(
-                        event=SendMoneyTransactionInputReceived(
-                            input_name="send_money_info", user_input=send_money_input
+                    try:
+                        await self.send_money_event_publisher.notify(
+                            event=SendMoneyTransactionInputReceived(
+                                input_name="send_money_info",
+                                user_input=send_money_input,
+                            )
                         )
-                    )
+                    except Exception as e:
+                        print(
+                            f"Error while notifying send money event observers {str(e)}"
+                        )
+                        return
 
                 case "otp":
                     self.controller_event_publisher.create_event(event_id=session_id)
                     otp = await self.controller_event_publisher.wait_for_event(
-                        event_id=session_id, timeout=None
+                        event_id=session_id
                     )
 
                     if otp is None:
@@ -160,6 +191,7 @@ class SendMoneyController:
         match step:
             case 1:
                 # Send money form information
+                data["session"] = session
                 await self.send_money_event_publisher.notify(
                     event=SendMoneyTransactionInputReceived(
                         input_name="send_money_info", user_input=data
@@ -183,7 +215,7 @@ class InvalidInputController:
 
 
 @dataclass
-class WithdrawController:
+class WithdrawController(IWithdrawObserver):
     """
     Coordinates the withdrawal process for a customer.
 
@@ -194,34 +226,49 @@ class WithdrawController:
             information required to withdraw funds.
     """
 
-    use_case: WithdrawUseCase
+    use_case_factory: WithdrawUseCaseFactory
     controller_event_publisher: ControllerEventPublisher
+    withdraw_event_publisher: WithdrawEventsPublisher
 
-    async def withdraw(
-        self, amount: int, receiving_phone_number: int, session: UserSession
-    ) -> None:
-        await self.use_case.withdraw_funds(
-            amount=amount,
-            receiving_phone_number=receiving_phone_number,
+    async def withdraw(self, session: UserSession) -> None:
+        use_case = self.use_case_factory.create(
+            withdraw_event_publisher=self.withdraw_event_publisher
+        )
+
+        self.withdraw_event_publisher.subscribe(observer=self)
+
+        await use_case.withdraw_funds(
             session=session,
         )
 
-    async def prompt_user(self, session: UserSession) -> None:
-        self.controller_event_publisher.create_event(event_id=session.id)
-        await self.use_case.prompt_user(session=session)
-        withdraw_funds_input = await self.controller_event_publisher.wait_for_event(
-            event_id=session.id, timeout=None
-        )
+    @override
+    async def update(self, event: object) -> None:
+        if isinstance(event, WithdrawInputRequired):
+            input_name = event.input_name
 
-        if withdraw_funds_input is None:
-            # Prompt user the input wasn't received
-            return
+            match input_name:
+                case "withdraw_info":
+                    self.controller_event_publisher.create_event(
+                        event_id=event.prompt_recepient
+                    )
+                    data = await self.controller_event_publisher.wait_for_event(
+                        event_id=event.prompt_recepient
+                    )
 
-        await self.withdraw(
-            amount=withdraw_funds_input["amount"],
-            receiving_phone_number=withdraw_funds_input["receiving_phone_number"],
-            session=session,
-        )
+                    if data is None:
+                        return
+
+                    print(f"User input from whatsapp: {data}")
+                    input = {
+                        "amount": data["amount"],
+                        "receiving_phone_number": data["receiving_phone_number"],
+                        "session_id": event.prompt_recepient,
+                    }
+                    await self.withdraw_event_publisher.notify(
+                        event=WithdrawInputReceived(
+                            input_name="withdraw_info", user_input=input
+                        )
+                    )
 
 
 @dataclass

@@ -59,3 +59,12 @@ class SessionService:
         )
 
         return deleted
+
+
+@dataclass
+class SessionServiceFactory:
+    repository: SQLAlchemySessionRepository
+
+    def create(self) -> SessionService:
+        session_service = SessionService(repository=self.repository)
+        return session_service

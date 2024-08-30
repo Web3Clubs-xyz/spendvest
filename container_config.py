@@ -24,6 +24,9 @@ class SpendvestConfig(containers.DeclarativeContainer):
     config.facebook.app_id.from_env("FACEBOOK_APP_ID")
     config.facebook.app_secret.from_env("FACEBOOK_APP_SECRET")
     config.whatsapp.access_token.from_env("WHATSAPP_ACCESS_TOKEN")
+    config.whatsapp.webhook_verification_token.from_env(
+        "WHATSAPP_WEBHOOK_VERIFICATION_TOKEN"
+    )
     config.whatsapp.phone_number_id.from_env("WHATSAPP_PHONE_NUMBER_ID")
     config.whatsapp.business_account_id.from_env("WHATSAPP_BUSINESS_ACCOUNT_ID")
     config.sasapay.client_id.from_env("SASAPAY_CLIENT_ID")
@@ -31,6 +34,9 @@ class SpendvestConfig(containers.DeclarativeContainer):
     config.sasapay.merchant_code.from_env("SASAPAY_MERCHANT_CODE")
     config.sasapay.wallet.personal_onboarding_endpoint.from_env(
         "SASAPAY_PERSONAL_ONBOARDING_ENDPOINT"
+    )
+    config.sasapay.wallet.personal_onboarding_confirmation_endpoint.from_env(
+        "SASAPAY_PERSONAL_ONBOARDING_CONFIRMATION_ENDPOINT"
     )
     config.sasapay.wallet.transfer_funds_endpoint.from_env(
         "SASAPAY_TRANSFER_FUNDS_ENDPOINT"

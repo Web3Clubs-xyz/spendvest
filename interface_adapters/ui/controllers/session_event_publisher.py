@@ -89,14 +89,21 @@ class ControllerEventPublisher(IUseCaseEventPublisher):
             `event_id (str)`: Unique identifier for a UI event.
             `data (Any)`: Data from the UI event we are observing.
         """
+        print(f"Notifying {len(self._observers)} controller observers")
         self._inputs[event_id] = data
         if event_type in self._observers:
             for observer in self._observers[event_type]:
                 asyncio.create_task(observer(event_id, data))
         if event_id in self._events:
             self._events[event_id].set()
+            del self._events[event_id]
         else:
-            print(f"Warning: Received callback for unknown event {event_id}")
+            print(
+                (
+                    f"Warning: Received callback for unknown event {event_id}."
+                    f"Events included are: {self._observers}"
+                )
+            )
 
     async def wait_for_event(
         self, event_id: str, timeout: float | None = None
@@ -114,6 +121,7 @@ class ControllerEventPublisher(IUseCaseEventPublisher):
 
         try:
             await asyncio.wait_for(self._events[event_id].wait(), timeout)
+            print(f"Sending data to observer {self._inputs.get(event_id)}")
             return self._inputs.get(event_id)
         except asyncio.TimeoutError:
             raise TimeoutError(f"Event {event_id} timed out.")

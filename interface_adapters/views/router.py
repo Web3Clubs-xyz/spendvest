@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
+import json
+from logging import Logger
+import traceback
 from pydantic import BaseModel, Field
 from typing_extensions import Dict, List, Optional
-
 from domain.entities.services.session_service import SessionService
 from domain.entities.sessions import SessionType, UserSession
 from interface_adapters.ui.controllers.controllers import (
@@ -23,7 +26,7 @@ class WhatsappProfile(BaseModel):
 
 class WhatsappValueContact(BaseModel):
     wa_id: str
-    user_id: str
+    user_id: Optional[str] = None
     profile: WhatsappProfile
 
 
@@ -54,11 +57,11 @@ class WhatsappMessageReferredProduct(BaseModel):
 
 
 class WhatsappMessageContext(BaseModel):
-    forwarded: bool
-    frequently_forwarded: bool
+    forwarded: Optional[bool] = None
+    frequently_forwarded: Optional[bool] = None
     from_: str = Field(alias="from")
     id_: str = Field(alias="id")
-    referred_product: WhatsappMessageReferredProduct
+    referred_product: Optional[WhatsappMessageReferredProduct] = None
 
 
 class WhatsappDocument(BaseModel):
@@ -99,14 +102,11 @@ class WhatsappFlowReply(BaseModel):
     response_json: str
 
 
-class WhatsappInteractiveType(BaseModel):
-    button_reply: Optional[WhatsappButtonReply]
-    list_reply: Optional[WhatsappListReply]
-    nfm_reply: Optional[WhatsappFlowReply]
-
-
 class WhatsappInteractive(BaseModel):
-    type_: WhatsappInteractiveType = Field(alias="type")
+    type_: str = Field(alias="type")
+    button_reply: Optional[WhatsappButtonReply] = None
+    list_reply: Optional[WhatsappListReply] = None
+    nfm_reply: Optional[WhatsappFlowReply] = None
 
 
 class WhatsappProductItems(BaseModel):
@@ -163,24 +163,24 @@ class WhatsappVideo(BaseModel):
 
 
 class WhatsappMessage(BaseModel):
-    audio: Optional[WhatsappAudio]
-    button: Optional[WhatsappButton]
-    context: Optional[WhatsappMessageContext]
-    document: Optional[WhatsappDocument]
-    errors: List[WhatsappError]
+    audio: Optional[WhatsappAudio] = None
+    button: Optional[WhatsappButton] = None
+    context: Optional[WhatsappMessageContext] = None
+    document: Optional[WhatsappDocument] = None
+    errors: Optional[List[WhatsappError]] = None
     from_: str = Field(alias="from")
     id_: str = Field(alias="id")
-    identity: Optional[WhatsappIdentity]
-    image: Optional[WhatsappImage]
-    interactive: Optional[WhatsappInteractive]
-    order: Optional[WhatsappOrder]
-    referral: Optional[WhatsappReferral]
-    sticker: Optional[WhatsappSticker]
-    system: Optional[WhatsappSystem]
-    text: Optional[WhatsappText]
+    identity: Optional[WhatsappIdentity] = None
+    image: Optional[WhatsappImage] = None
+    interactive: Optional[WhatsappInteractive] = None
+    order: Optional[WhatsappOrder] = None
+    referral: Optional[WhatsappReferral] = None
+    sticker: Optional[WhatsappSticker] = None
+    system: Optional[WhatsappSystem] = None
+    text: Optional[WhatsappText] = None
     timestamp: str
     type_: str = Field(alias="type")
-    video: Optional[WhatsappVideo]
+    video: Optional[WhatsappVideo] = None
 
 
 class WhatsappMetadata(BaseModel):
@@ -195,7 +195,7 @@ class WhatsappConversationOrigin(BaseModel):
 class WhatsappStatusConversation(BaseModel):
     id: str
     origin: WhatsappConversationOrigin
-    expiration_timestamp: Optional[str]
+    expiration_timestamp: Optional[str] = None
 
 
 class WhatsappPricing(BaseModel):
@@ -204,23 +204,23 @@ class WhatsappPricing(BaseModel):
 
 
 class WhatsappStatus(BaseModel):
-    biz_opaque_callback_data: str
-    conversation: WhatsappStatusConversation
-    errors: List[WhatsappError]
+    biz_opaque_callback_data: Optional[str] = None
+    conversation: Optional[WhatsappStatusConversation] = None
+    errors: Optional[List[WhatsappError]] = None
     id_: str = Field(alias="id")
-    pricing: WhatsappPricing
-    recepient_id: str
+    pricing: Optional[WhatsappPricing] = None
+    recepient_id: Optional[str] = None
     status: str
     timestamp: str
 
 
 class WhatsappValue(BaseModel):
-    contacts: List[WhatsappValueContact]
-    errors: List[WhatsappError]
+    contacts: Optional[List[WhatsappValueContact]] = None
+    errors: Optional[List[WhatsappError]] = None
     messaging_product: str
-    messages: List[WhatsappMessage]
+    messages: Optional[List[WhatsappMessage]] = None
     metadata: WhatsappMetadata
-    statuses: List[WhatsappStatus]
+    statuses: Optional[List[WhatsappStatus]] = None
 
 
 class WhatsappChange(BaseModel):
@@ -256,8 +256,8 @@ class SpendvestMessage:
 
     _whatsapp_id: str
     _message_type: str
-    _text: Optional[WhatsappText]
-    _interactive: Optional[WhatsappInteractive]
+    _text: Optional[WhatsappText] = None
+    _interactive: Optional[WhatsappInteractive] = None
 
     @property
     def whatsapp_id(self) -> str:
@@ -290,6 +290,12 @@ class SpendvestMessage:
     @interactive.setter
     def interactive(self, interactive: WhatsappInteractive | None) -> None:
         self._interactive = interactive
+
+    def __str__(self):
+        return (
+            f"whatsapp_id: {self.whatsapp_id}, message_type:"
+            f"{self.message_type}, text: {self.text}, interactive: {self.interactive}"
+        )
 
 
 class IRouter(ABC):
@@ -341,6 +347,7 @@ class WhatsappRouter:
     withdraw_controller: WithdrawController
     invalid_input_controller: InvalidInputController
     controller_event_publisher: ControllerEventPublisher
+    logger: Logger
 
     def extract_data(self, message: SpendvestMessage) -> Dict:
         message_type = message.message_type
@@ -351,29 +358,30 @@ class WhatsappRouter:
                     return {}
 
                 return {"data": message.text.body}
-            case "list_reply":
+            case "interactive":
                 if message.interactive is None:
                     return {}
 
-                if message.interactive.type_.list_reply is None:
-                    return {}
+                if message.interactive.list_reply is not None:
+                    return {"data": message.interactive.list_reply.id}
 
-                return {"data": message.interactive.type_.list_reply.id}
-            case "nfm_reply":
-                if message.interactive is None:
-                    return {}
+                if message.interactive.nfm_reply is not None:
+                    data = json.loads(message.interactive.nfm_reply.response_json)
+                    return {"data": data}
 
-                if message.interactive.type_.nfm_reply is None:
-                    return {}
+                if message.interactive.button_reply is not None:
+                    return {"data": message.interactive.button_reply.id}
 
-                return {"data": message.interactive.type_.nfm_reply.response_json}
+                return {}
             case _:
                 return {}
 
     async def route(
         self, session: UserSession | None, message: SpendvestMessage
     ) -> None:
+        print("Routing...")
         if session is None:
+            print("Creating new session")
             await self.new_session_controller.create_session(
                 external_id=message.whatsapp_id
             )
@@ -393,12 +401,12 @@ class WhatsappRouter:
         if (
             session_type == 1
             and message.interactive is not None
-            and message.interactive.type_.list_reply is not None
+            and message.interactive.list_reply is not None
         ):
             # This is a new session check what user picked in list and
             # start that session state machine.
             # identify which controller to use based on selection
-            option = message.interactive.type_.list_reply.id
+            option = message.interactive.list_reply.id
 
             match option:
                 case "send_money":
@@ -418,40 +426,121 @@ class WhatsappRouter:
                     )
 
                     # call withdraw controller
-                    await self.withdraw_controller.prompt_user(session=session)
+                    await self.withdraw_controller.withdraw(session=session)
                 case _:
                     # Handle invalid option
                     pass
+        elif (
+            session_type == 1
+            and message.interactive is not None
+            and message.interactive.button_reply is not None
+        ):
+            button_id = message.interactive.button_reply.id
+
+            if button_id == "sign_up":
+                # Update session type
+                session.session_type = SessionType(id=2, name="REGISTRATION")
+                await self.session_service.save_customer_session(
+                    customer_session=session
+                )
+
+                # Call send money controller
+                print("Calling register_user()")
+                await self.registration_controller.register_user(session=session)
+
         elif session_type == 2:
             # This is a registration session
             # Send session and input data to controller for processing
 
-            data = self.extract_data(message=message)
-            self.controller_event_publisher.notify(
-                event_id=session.id, event_type="registration", data=data
-            )
+            if (
+                message.interactive is not None
+                and message.interactive.type_ == "nfm_reply"
+            ):
+                try:
+                    extracted_data = self.extract_data(message=message)
+                    data = extracted_data["data"]
+
+                    user_input = {
+                        "first_name": data["first_name"],
+                        "middle_name": data["middle_name"],
+                        "last_name": data["last_name"],
+                        "phone_number": data["phone_number"],
+                        "email": data["email"],
+                        "document_type": data["document_type"],
+                        "document_number": data["document_number"],
+                        "saving_percentage": data["saving_percentage"],
+                        "whatsapp": session.id,
+                    }
+
+                    self.controller_event_publisher.notify(
+                        event_id=session.id, event_type="registration", data=user_input
+                    )
+                except Exception as e:
+                    print(f"An error occured while notifying controllers {str(e)}")
+                    traceback.print_exc()  # Logs the full traceback to the console
+
+            if message.text is not None:
+                # We are processing an OTP
+                otp = self.extract_data(message=message)["data"]
+
+                self.controller_event_publisher.notify(
+                    event_id=session.id, event_type="registration_otp", data=otp
+                )
 
         elif session_type == 3:
             # Send session and data to controller for processing
 
-            data = self.extract_data(message=message)
-            self.controller_event_publisher.notify(
-                event_id=session.id, event_type="send_money", data=data
-            )
+            if (
+                message.interactive is not None
+                and message.interactive.type_ == "nfm_reply"
+            ):
+                data = self.extract_data(message=message)["data"]
+                self.logger.info(f"Processing send money flow information {data}")
+                user_input = {
+                    "payment_amount": int(data["payment_amount"]),
+                    "receiving_phone_number": int(data["receiving_phone_number"]),
+                    "session": session,
+                }
+                self.controller_event_publisher.notify(
+                    event_id=session.id, event_type="send_money", data=user_input
+                )
+
+            if message.text is not None:
+                pass
 
         elif session_type == 4:
             # Emit event to withdraw controller
-            data = self.extract_data(message=message)
-            await self.withdraw_controller.withdraw(
-                amount=data["amount"],
-                receiving_phone_number=data["receiving_phone_number"],
-                session=session,
-            )
+            if (
+                message.interactive is not None
+                and message.interactive.type_ == "nfm_reply"
+            ):
+                data = self.extract_data(message=message)["data"]
+
+                user_input = {
+                    "amount": int(data["amount"]),
+                    "receiving_phone_number": int(data["receiving_phone_number"]),
+                }
+                self.controller_event_publisher.notify(
+                    event_id=session.id, event_type="withdraw", data=user_input
+                )
+
         else:
             # handle invalid session type
             pass
 
+    def old_message(self, message_timestamp: int) -> bool:
+        current_time = datetime.now().timestamp()
+        time_delta = current_time - message_timestamp
+
+        return time_delta > 120
+
     async def handle_message(self, message: WhatsappMessage):
+        message_timestamp = int(message.timestamp)
+
+        if self.old_message(message_timestamp=message_timestamp):
+            self.logger.warning("Received old message.")
+            return
+
         whatsapp_id = message.from_
         input: SpendvestMessage = SpendvestMessage()
         input.whatsapp_id = whatsapp_id
@@ -473,8 +562,11 @@ class WhatsappRouter:
 
     async def handle_value(self, value: WhatsappValue):
         messages = value.messages
-        for message in messages:
-            await self.handle_message(message=message)
+        statuses = value.statuses
+
+        if statuses is None and messages is not None:
+            for message in messages:
+                await self.handle_message(message=message)
 
     async def handle_changes(self, changes: List[WhatsappChange]):
         for change in changes:

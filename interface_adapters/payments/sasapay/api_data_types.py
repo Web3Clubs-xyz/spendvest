@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 from typing_extensions import TypedDict
 
 
@@ -160,9 +161,16 @@ class PersonalOnboardingConfirmationResponseParameters:
     status: bool
     response_code: str
     message: str
-    data: ConfirmationResponseData
+    data: Optional[ConfirmationResponseData] = None
 
     def to_dict(self):
+        if self.data is None:
+            return {
+                "status": self.status,
+                "response_code": self.response_code,
+                "message": self.message,
+            }
+
         return {
             "status": self.status,
             "responseCode": self.response_code,
@@ -255,8 +263,9 @@ class RequestPaymentResponseParameters:
     response_code: str
     message: str
     payment_gateway: str
+    merchant_request_id: str
     checkout_request_id: str
-    merchant_reference: str
+    transaction_reference: str
     customer_message: str
 
     def to_dict(self):
@@ -265,8 +274,9 @@ class RequestPaymentResponseParameters:
             "responseCode": self.response_code,
             "message": self.message,
             "paymentGateway": self.payment_gateway,
+            "merchantRequestID": self.merchant_request_id,
             "checkoutRequestID": self.checkout_request_id,
-            "merchantReference": self.merchant_reference,
+            "transactionReference": self.transaction_reference,
             "customerMessage": self.customer_message,
         }
 

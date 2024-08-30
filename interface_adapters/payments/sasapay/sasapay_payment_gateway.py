@@ -1,30 +1,35 @@
 from asyncio import Queue
+from configparser import Error
 from dataclasses import dataclass, field
 from logging import Logger
-import math
-from typing import Any, AsyncGenerator, Dict
+from typing import Dict
 from uuid import uuid4
 from aiohttp import ClientSession
 import aiohttp
 from domain.entities.services.registration_event_publisher import (
     RegistrationEventsPublisher,
     RegistrationInputReceived,
-    RegistrationInputRequired,
+    RegistrationUserPrompt,
 )
 from domain.entities.services.send_money_events_publisher import (
+    ISendMoneyObserver,
     SendMoneyEventsPublisher,
     SendMoneyTransactionInputReceived,
+    SendMoneyUserPrompt,
+)
+from domain.entities.services.withdraw_event_publisher import (
+    IWithdrawObserver,
+    WithdrawEventsPublisher,
 )
 from domain.entities.users import Customer
 from domain.usecases.interfaces.register_account_interfaces import (
     IRegistrationEventObserver,
 )
 from interface_adapters.payments.sasapay.api_data_types import (
-    PersonalOnboardingConfirmation,
+    ConfirmationResponseData,
     PersonalOnboardingConfirmationResponseParameters,
     PersonalOnboardingRequestParameters,
     PersonalOnboardingResponseParameters,
-    RequestPaymentCallbackResultsParameters,
     RequestPaymentOTPRequestParameters,
     RequestPaymentRequestParameters,
     RequestPaymentResponseParameters,
@@ -37,12 +42,14 @@ from interface_adapters.payments.sasapay.payment_events_publisher import (
 )
 
 
+@dataclass
 class SasapayApiClient:
     """
     API client that talks to sasapay's api.
     """
 
     personal_onboarding_endpoint: str
+    personal_onboarding_confirmation_endpoint: str
     access_token: str
     request_payment_endpoint: str
     transfer_funds_endpoint: str
@@ -54,10 +61,16 @@ class SasapayApiClient:
 
     async def post_json_request(self, session: ClientSession, url: str, data: Dict):
         self.sasapay_headers.update({"Authorization": f"Bearer {self.access_token}"})
+        self.logger.info(f"Headers: {self.sasapay_headers}")
+        self.logger.info(f"Access Token: {self.access_token}")
+        self.logger.info(f"URL: {url}")
+        self.logger.info(f"Payload: {data}")
         async with session.post(
             url, json=data, headers=self.sasapay_headers
         ) as response:
-            return response
+            data = await response.json()
+            self.logger.info(f"Response from api: {data}")
+            return data
 
     async def personal_onboarding_request(
         self,
@@ -79,7 +92,7 @@ class SasapayApiClient:
             middle_name=customer.middle_name,
             last_name=customer.last_name,
             country_code="254",
-            mobile_number=str(customer.phone_number),
+            mobile_number=f"0{customer.phone_number}",
             document_number=document_number,
             document_type=document_type,
             email=customer.email,
@@ -87,22 +100,17 @@ class SasapayApiClient:
             + "/api/v1/callbacks/sasapay/personal_onboarding/"
             + otp_event_id,
         )
-        # create personal onboarding response payment event
-        self.payment_events_publisher.create_event(event_id=otp_event_id)
+        self.logger.info(f"Registration Info: {registration_information.to_dict()}")
+
         # Make personal on boarding request api call
         async with aiohttp.ClientSession() as session:
-            await self.post_json_request(
+            response = await self.post_json_request(
                 session=session,
                 url=self.personal_onboarding_endpoint,
                 data=registration_information.to_dict(),
             )
 
-        # Wait for personal onboarding response payment event from callback
-        callback_response = await self.payment_events_publisher.wait_for_event(
-            event_id=otp_event_id, timeout=False
-        )
-
-        if callback_response is None:
+        if response is None:
             self.logger.critical(
                 "Sasapay didn't return a response",
                 extra={
@@ -113,15 +121,13 @@ class SasapayApiClient:
             )
             raise ValueError("Sasapay didn't return a response")
 
-        self.logger.info(
-            "Staged registration", extra={"request_id": callback_response["request_id"]}
-        )
+        self.logger.info(f"Staged registration: {response}")
         # return data from callback endpoint
         return PersonalOnboardingResponseParameters(
-            status=callback_response["Status"],
-            response_code=callback_response["ResponseCode"],
-            message=callback_response["message"],
-            request_id=callback_response["request_id"],
+            status=response["status"],
+            response_code=response["responseCode"],
+            message=response["message"],
+            request_id=response["requestId"],
         )
 
     async def complete_registration(
@@ -135,45 +141,43 @@ class SasapayApiClient:
                 parameters needed to complete the registration of a customer's
                 wallet.
         """
-        confirmation_data = PersonalOnboardingConfirmation(
-            merchant_code=self.merchant_code, otp=otp, request_id=request_id
-        )
 
         # Create personal onboarding confirmation payment event
         self.payment_events_publisher.create_event(event_id=request_id)
 
         # Make complete registration api call
         async with aiohttp.ClientSession() as session:
-            await self.post_json_request(
+            response = await self.post_json_request(
                 session=session,
-                url=self.personal_onboarding_endpoint,
+                url=self.personal_onboarding_confirmation_endpoint,
                 data={
-                    "MerchantCode": self.merchant_code,
-                    "ConfirmationCode": confirmation_data.otp,
-                    "RequestId": confirmation_data.request_id,
+                    "merchantCode": str(self.merchant_code),
+                    "otp": str(otp),
+                    "requestId": str(request_id),
                 },
             )
+            self.logger.info(f"Confirm Registration Response: {response}")
 
-        # Wait for confirmed registration payment event from callback
-        registration_results = await self.payment_events_publisher.wait_for_event(
-            event_id=request_id
-        )
+        if response["status"]:
+            confirmation_data: ConfirmationResponseData = {
+                "merchant_code": response["data"]["merchantCode"],
+                "display_name": response["data"]["displayName"],
+                "account_number": response["data"]["accountNumber"],
+                "account_status": response["data"]["accountStatus"],
+                "account_balance": response["data"]["accountBalance"],
+            }
 
-        if registration_results is None:
-            self.logger.critical(
-                "Sasapay didn't return a response to complete account registration.",
-                extra={"class": "SasapayApiClient", "method": "complete_registration"},
+            return PersonalOnboardingConfirmationResponseParameters(
+                status=response["status"],
+                response_code=response["responseCode"],
+                message=response["message"],
+                data=confirmation_data,
             )
-            raise ValueError(
-                "Sasapay didn't return a response for account registration."
-            )
 
-        # return data from callback endpoint
         return PersonalOnboardingConfirmationResponseParameters(
-            status=registration_results["Status"],
-            response_code=registration_results["ResponseCode"],
-            message=registration_results["Message"],
-            data=registration_results["Data"],
+            status=response["status"],
+            response_code=response["responseCode"],
+            message=response["message"],
         )
 
     async def transfer_funds(
@@ -181,7 +185,8 @@ class SasapayApiClient:
         amount: int,
         recepient_phone_number: int,
         external_wallet_id: str,
-    ) -> TransferFundsResultsParameters:
+        event_id: str,
+    ) -> TransferFundsResultsParameters | None:
         """
         API call to transfer funds from a wallet.
 
@@ -189,39 +194,48 @@ class SasapayApiClient:
             request_parameters (`TransferFundsRequestParameters`): request
                 parameters needed to call the transfer funds api endpoint.
         """
-        # Create transfered funds payment events
-        event_id = uuid4().hex
+        self.logger.info(
+            (
+                f"Transfering funds to {recepient_phone_number} from "
+                "wallet of id {external_wallet_id}"
+            )
+        )
+
+        # Create event
         self.payment_events_publisher.create_event(event_id=event_id)
 
         # Make transfer funds api call
         request_parameters = TransferFundsRequestParameters(
             merchant_code=self.merchant_code,
-            transaction_reference=event_id,
+            transaction_reference=uuid4().hex,
             currency_code="KES",
             transaction_description="Sending money or withdrawing.",
             sender_number=external_wallet_id,
             amount=amount,
-            reason="",
+            reason="Sending money to save.",
             # `charge_account` identifies which account will be charged the
             # transaction fees
-            charge_account="2822",
+            charge_account=external_wallet_id,
             transaction_fee=0,
-            channel="01",
+            channel="63902",
             receiver_number=str(recepient_phone_number),
             callback_url=self.site_url
             + "/api/v1/callbacks/sasapay/transfer_funds/"
             + event_id,
         )
         async with aiohttp.ClientSession() as session:
-            await self.post_json_request(
+            response = await self.post_json_request(
                 session=session,
-                url=self.personal_onboarding_endpoint,
+                url=self.transfer_funds_endpoint,
                 data=request_parameters.to_dict(),
             )
 
+        if response["responseCode"] == "SP8000":
+            raise Exception(f"Insufficient balance to withdraw {amount}.")
+
         # Wait for transfered funds payment event from callback
         transfer_funds_results = await self.payment_events_publisher.wait_for_event(
-            event_id=event_id, timeout=False
+            event_id=event_id
         )
 
         if transfer_funds_results is None:
@@ -231,37 +245,26 @@ class SasapayApiClient:
             )
             raise ValueError("Sasapay didn't return any result for transfering funds.")
 
+        if int(transfer_funds_results.result_code) != 0:
+            self.logger.warning(
+                "There was an error transfering funds",
+                extra={
+                    "class": "SasaPayPaymentGatewayAdapter",
+                    "error_code": transfer_funds_results.result_code,
+                },
+            )
+            return None
+
         # return data from callback endpoint
-        return TransferFundsResultsParameters(
-            merchant_request_id=transfer_funds_results["MerchantRequestId"],
-            checkout_request_id=transfer_funds_results["CheckoutRequestId"],
-            result_code=transfer_funds_results["ResultCode"],
-            result_description=transfer_funds_results["ResultDescription"],
-            merchant_code=transfer_funds_results["MerchantCode"],
-            transaction_amount=transfer_funds_results["TransactionAmount"],
-            transaction_charge=transfer_funds_results["TransactionCharge"],
-            merchant_fees=transfer_funds_results["MerchantFees"],
-            merchant_account_balance=transfer_funds_results["MerchantAccountBalance"],
-            merchant_transaction_reference=transfer_funds_results[
-                "MerchantTransactionReference"
-            ],
-            transaction_date=transfer_funds_results["TransactionDate"],
-            recepient_account_number=transfer_funds_results["RecepientAccountNumber"],
-            destination_channel=transfer_funds_results["DestinationChannel"],
-            source_channel=transfer_funds_results["SourceChannel"],
-            sasapay_transaction_id=transfer_funds_results["SasapayTransactionId"],
-            recepient_name=transfer_funds_results["RecepientName"],
-            sender_account_number=transfer_funds_results["SenderAccountNumber"],
-        )
+        return transfer_funds_results
 
     async def request_payment(
         self,
         sender_phone_number: int,
         wallet_external_id: str,
         amount: int,
-    ) -> AsyncGenerator[
-        RequestPaymentResponseParameters | RequestPaymentCallbackResultsParameters, Any
-    ]:
+        event_id: str,
+    ) -> RequestPaymentResponseParameters:
         """
         Requests payment from a phone number.
 
@@ -269,15 +272,11 @@ class SasapayApiClient:
             request_parameters (`RequestPaymentRequestParameters`): request
                 parameters needed to call the request payment api endpoint.
         """
-        # Create payment requested payment event
-        event_id = uuid4().hex
-        self.payment_events_publisher.create_event(event_id=event_id)
-
         # Make request payment api call
         request_payment_request_parameters = RequestPaymentRequestParameters(
-            merchant_reference=event_id,
+            merchant_reference=uuid4().hex,
             network_code="63902",
-            mobile_number=str(sender_phone_number),
+            mobile_number=f"0{sender_phone_number}",
             receiver_account_number=wallet_external_id,
             amount=str(amount),
             transaction_fee="0",
@@ -289,61 +288,32 @@ class SasapayApiClient:
             + event_id,
         )
         async with aiohttp.ClientSession() as session:
-            response = await self.post_json_request(
+            request_payment_response_parameters = await self.post_json_request(
                 session=session,
-                url=self.personal_onboarding_endpoint,
+                url=self.request_payment_endpoint,
                 data=request_payment_request_parameters.to_dict(),
             )
-            request_payment_response_parameters = await response.json()
 
-            yield RequestPaymentResponseParameters(
+            if not request_payment_response_parameters["status"]:
+                message = request_payment_response_parameters["message"]
+                raise Error(f"There was a problem requesting payment: {message}")
+
+            return RequestPaymentResponseParameters(
                 status=request_payment_response_parameters["status"],
                 response_code=request_payment_response_parameters["responseCode"],
                 message=request_payment_response_parameters["message"],
                 payment_gateway=request_payment_response_parameters["paymentGateway"],
-                checkout_request_id=request_payment_response_parameters[
-                    "checkoutRequestId"
+                merchant_request_id=request_payment_response_parameters[
+                    "merchantRequestID"
                 ],
-                merchant_reference=request_payment_response_parameters[
-                    "merchantReference"
+                checkout_request_id=request_payment_response_parameters[
+                    "checkoutRequestID"
+                ],
+                transaction_reference=request_payment_response_parameters[
+                    "transactionReference"
                 ],
                 customer_message=request_payment_response_parameters["customerMessage"],
             )
-
-        # Wait for payment requested payment event from callback
-        request_payment_results = await self.payment_events_publisher.wait_for_event(
-            event_id=event_id, timeout=False
-        )
-
-        if request_payment_results is None:
-            self.logger.critical(
-                (
-                    "Sasapay didn't return a result after "
-                    "requesting payment from phone number."
-                ),
-                extra={"class": "SasapayApiClient", "method": "request_payment"},
-            )
-            raise ValueError("Couldn't request payment from customer.")
-
-        # return data from callback endpoint
-        results = RequestPaymentCallbackResultsParameters(
-            merchant_request_id=request_payment_results["MerchantRequestId"],
-            payment_request_id=request_payment_results["PaymentRequestId"],
-            result_code=request_payment_results["ResultCode"],
-            result_description=request_payment_results["ResultDescription"],
-            source_channel=request_payment_results["SourceChannel"],
-            transaction_amount=request_payment_results["TransactionAmount"],
-            bill_reference_number=request_payment_results["BillReferenceNumber"],
-            transaction_date=request_payment_results["TransactionDate"],
-            customer_mobile=request_payment_results["CustomerMobile"],
-            transaction_code=request_payment_results["TransactionCode"],
-            third_party_transaction_id=request_payment_results[
-                "ThirdPartyTransactionId"
-            ],
-            checkout_request_id=request_payment_results["CheckoutRequestId"],
-        )
-
-        yield results
 
     async def process_payment(
         self, otp: str, external_wallet_id: str, checkout_request_id: str
@@ -369,7 +339,6 @@ class SasapayApiClient:
                 url=self.personal_onboarding_endpoint,
                 data=otp_request_params.to_dict(),
             )
-            response_data = await response.json()
 
         if response is None:
             self.logger.critical(
@@ -379,14 +348,16 @@ class SasapayApiClient:
                 "Sasapay didn't return a response for request payment processing."
             )
 
-        if response_data["responseCode"] == 0:
+        if response["responseCode"] == 0:
             return True
 
         return False
 
 
 @dataclass
-class SasaPayPaymentGatewayAdapter(IRegistrationEventObserver):
+class SasaPayPaymentGatewayAdapter(
+    IRegistrationEventObserver, ISendMoneyObserver, IWithdrawObserver
+):
     """
     Payment Gateway implementation for SasaPay
 
@@ -415,13 +386,37 @@ class SasaPayPaymentGatewayAdapter(IRegistrationEventObserver):
 
     merchant_code: str = field(init=False)
     sasapay_api_client: SasapayApiClient = field(init=False)
-    send_money_event_publisher: SendMoneyEventsPublisher
+    send_money_event_publisher: SendMoneyEventsPublisher | None
+    registration_event_publisher: RegistrationEventsPublisher | None
+    withdraw_event_publisher: WithdrawEventsPublisher | None
+    payment_events_publisher: PaymentEventsPublisher
     registration_info_queue: Queue
     request_payment_queue: Queue
     otp_queue: Queue
     logger: Logger
-    transaction_cost_brackets: Dict = field(
-        default_factory=lambda: {
+    transaction_cost_brackets: Dict
+
+    def __init__(
+        self,
+        merchant_code: str,
+        logger: Logger,
+        sasapay_api_client: SasapayApiClient,
+        payment_events_publisher: PaymentEventsPublisher,
+        withdraw_event_publisher: WithdrawEventsPublisher | None = None,
+        registration_event_publisher: RegistrationEventsPublisher | None = None,
+        send_money_event_publisher: SendMoneyEventsPublisher | None = None,
+    ) -> None:
+        self.merchant_code = merchant_code
+        self.sasapay_api_client = sasapay_api_client
+        self.registration_event_publisher = registration_event_publisher
+        self.send_money_event_publisher = send_money_event_publisher
+        self.withdraw_event_publisher = withdraw_event_publisher
+        self.payment_events_publisher = payment_events_publisher
+        self.registration_info_queue = Queue()
+        self.request_payment_queue = Queue()
+        self.otp_queue = Queue()
+        self.logger = logger
+        self.transaction_cost_brackets = {
             (0, 49): 0,
             (50, 100): 0,
             (101, 500): 7,
@@ -443,34 +438,11 @@ class SasaPayPaymentGatewayAdapter(IRegistrationEventObserver):
             (50001, 70000): 39,
             (70001, 150000): 39,
         }
-    )
-
-    def __init__(
-        self,
-        merchant_code: str,
-        registration_event_publisher: RegistrationEventsPublisher,
-        send_money_event_publisher: SendMoneyEventsPublisher,
-    ) -> None:
-        self.merchant_code = merchant_code
-        self.sasapay_api_client = SasapayApiClient()
-        self.send_money_event_publisher = send_money_event_publisher
-        self.registration_event_publisher = registration_event_publisher
-        self.registration_event_publisher.subscribe(self)
-        self.registration_info_queue = Queue()
-        self.request_payment_queue = Queue()
-        self.otp_queue = Queue()
-
-    def calculate_mark_up(self, amount: int, saving_percentage: int) -> int:
-        return math.ceil(amount * (saving_percentage * 0.01))
-
-    def calculate_mark_down(self, total_amount: int, saving_percentage: int) -> int:
-        percentage_operand = 1 + (saving_percentage * 0.01)
-
-        return math.ceil(total_amount / percentage_operand)
 
     async def send_money(
         self,
-        payment_amount: int,
+        total_requested_amount: int,
+        original_amount: int,
         sending_phone_number: int,
         receiving_phone_number: int,
         external_wallet_id: str,
@@ -485,60 +457,91 @@ class SasaPayPaymentGatewayAdapter(IRegistrationEventObserver):
                 marked up by the saving percentage set in their wallet.
             phone_number (int): Customer's phone number that is being charged.
         """
+        self.logger.info("Requesting payment in payment gateway.")
+        # Create callback event
+        self.payment_events_publisher.create_event(event_id=session_id)
+
         # Request payment from api client
-        request_payment_iterator = self.sasapay_api_client.request_payment(
+        request_payment_response = await self.sasapay_api_client.request_payment(
             sender_phone_number=sending_phone_number,
             wallet_external_id=external_wallet_id,
-            amount=payment_amount,
+            amount=total_requested_amount,
+            event_id=session_id,
+        )
+        self.logger.info(
+            f"Received response after requesting payment: {request_payment_response}"
         )
 
-        request_payment_response = await anext(request_payment_iterator)
+        if self.send_money_event_publisher is None:
+            raise Error("Registration event publisher is not defined.")
 
-        await self.registration_event_publisher.notify(
-            event=RegistrationInputRequired(
-                prompt_recepient=session_id, input_name="otp"
+        await self.send_money_event_publisher.notify(
+            event=SendMoneyUserPrompt(
+                prompt_recepient=session_id,
+                event_name="pin_prompt",
             )
         )
 
-        otp_value = await self.otp_queue.get()
-
-        processing_payment = await self.sasapay_api_client.process_payment(
-            otp=otp_value,
-            external_wallet_id=external_wallet_id,
-            checkout_request_id=request_payment_response.to_dict()["checkoutRequestId"],
+        callback_response = await self.payment_events_publisher.wait_for_event(
+            event_id=session_id
         )
 
-        if processing_payment:
-            request_payment_callback_results = await anext(request_payment_iterator)
-            # TODO Inform user we requested payment successfully.
-            self.logger.info(
-                "Requested payment successfully",
-                extra={
-                    "class": "SasaPayPaymentGatewayAdapter",
-                    "request_payment_info": request_payment_callback_results,
-                    "external_wallet_id": external_wallet_id,
-                    "session_id": session_id,
+        self.logger.info(f"Received callback response: {callback_response}")
+
+        if callback_response is None:
+            self.logger.critical(
+                "Sasapay didn't return a response for requesting funds."
+            )
+
+            return False
+
+        if int(callback_response.result_code) != 0:
+            await self.send_money_event_publisher.notify(
+                event=SendMoneyUserPrompt(
+                    prompt_recepient=session_id,
+                    event_name="failed_funds_transfer",
+                )
+            )
+
+            return False
+
+        await self.send_money_event_publisher.notify(
+            event=SendMoneyUserPrompt(
+                prompt_recepient=session_id,
+                event_name="successful_funds_request",
+                data={
+                    "phone_number": sending_phone_number,
+                    "receiving_phone_number": receiving_phone_number,
                 },
             )
-
-        # Transfer funds using api client
+        )
 
         transfer_funds_result = await self.sasapay_api_client.transfer_funds(
-            amount=payment_amount,
+            amount=original_amount,
             recepient_phone_number=receiving_phone_number,
             external_wallet_id=external_wallet_id,
+            event_id=session_id,
         )
 
-        if transfer_funds_result.to_dict()["ResultCode"] != "0":
-            self.logger.warning(
-                "There was an error transfering funds",
-                extra={
-                    "class": "SasaPayPaymentGatewayAdapter",
-                    "error_code": transfer_funds_result.to_dict()["ResultCode"],
-                },
-            )
+        if transfer_funds_result is None:
             # TODO Inform user that we couldn't transfer funds
+            await self.send_money_event_publisher.notify(
+                event=SendMoneyUserPrompt(
+                    prompt_recepient=session_id, event_name="failed_funds_transfer"
+                )
+            )
             return False
+
+        await self.send_money_event_publisher.notify(
+            event=SendMoneyUserPrompt(
+                prompt_recepient=session_id,
+                event_name="successful_funds_transfer",
+                data={
+                    "amount": original_amount,
+                    "recepient_phone_number": receiving_phone_number,
+                },
+            ),
+        )
 
         return True
 
@@ -546,7 +549,7 @@ class SasaPayPaymentGatewayAdapter(IRegistrationEventObserver):
         """
         Calculates the transaction cost of a given amount
         """
-        for (lower, upper), cost in self.transaction_cost_brackets:
+        for (lower, upper), cost in self.transaction_cost_brackets.items():
             if lower <= amount <= upper:
                 return cost
 
@@ -567,6 +570,7 @@ class SasaPayPaymentGatewayAdapter(IRegistrationEventObserver):
             wallet_service (`IWalletService`): Wallet service we will be
                 communcating with.
         """
+        self.logger.info(f"Customer information: {customer}")
 
         staged_registration_result = (
             await self.sasapay_api_client.personal_onboarding_request(
@@ -577,33 +581,52 @@ class SasaPayPaymentGatewayAdapter(IRegistrationEventObserver):
             )
         )
 
+        otp_retries_count = 1
         while True:
             # Depending on staged registration result, notify Use Case event
             # publisher of staged result
+            input_name = "otp"
+
+            if otp_retries_count > 1:
+                input_name = "otp_failed"
+
+            self.logger.info("Prompting user for OTP")
+
+            if self.registration_event_publisher is None:
+                raise Error("Registration event publisher is not defined")
 
             await self.registration_event_publisher.notify(
-                event=RegistrationInputRequired(
-                    prompt_recepient=event_id, input_name="otp"
+                event=RegistrationUserPrompt(
+                    prompt_recepient=event_id, event_name=input_name
                 )
             )
 
             otp_value = await self.otp_queue.get()
+            print("Got otp from queue")
 
             otp_value = str(otp_value)
 
             # Complete registration with api client
             # Get registration status after sending otp which is sent by api client
-            registration_status = await self.sasapay_api_client.complete_registration(
+            registration_info = await self.sasapay_api_client.complete_registration(
                 otp=otp_value, request_id=staged_registration_result.request_id
             )
 
-            if registration_status.response_code == 0:
+            otp_retries_count += 1
+            if registration_info.response_code == "0":
                 break
 
-        return registration_status.data["account_number"]
+        if registration_info.data is not None:
+            return registration_info.data["account_number"]
+
+        raise Error("Account number was not provided")
 
     async def withdraw(
-        self, amount: int, external_wallet_id: str, recepient_phone_number: int
+        self,
+        amount: int,
+        external_wallet_id: str,
+        recepient_phone_number: int,
+        session_id: str,
     ) -> bool:
         """
         Withdraws money from a sasapay wallet.
@@ -613,35 +636,82 @@ class SasaPayPaymentGatewayAdapter(IRegistrationEventObserver):
             external_wallet_id (`str`): Unique identifier that sasapay uses to
                 identify wallet to withdraw from.
         """
+        self.logger.info("Withdrawing in payment gateway")
         results = await self.sasapay_api_client.transfer_funds(
             amount=amount,
             recepient_phone_number=recepient_phone_number,
             external_wallet_id=external_wallet_id,
+            event_id=session_id,
         )
 
-        if results.result_code != "0":
-            self.logger.warning(
-                "Couldn't transfer funds for customer",
-                extra={
-                    "class": "SasaPayPaymentGatewayAdapter",
-                    "error_code": results.result_code,
-                    "external_wallet_id": external_wallet_id,
-                },
-            )
+        if results is None:
+            self.logger.critical("User was unable to withdraw")
             return False
 
+        self.logger.info("User was able to withdraw")
         return True
 
     async def update(self, event: object) -> None:
 
-        if (
-            isinstance(event, RegistrationInputReceived)
-            and event.input_name == "registration_otp"
-        ):
+        if isinstance(event, RegistrationInputReceived) and event.input_name == "otp":
             await self.otp_queue.put(event.user_input["otp"])
 
         if (
             isinstance(event, SendMoneyTransactionInputReceived)
-            and event.input_name == "send_money_otp"
+            and event.input_name == "otp"
         ):
             await self.otp_queue.put(event.user_input["otp"])
+
+
+@dataclass
+class SasaPayPaymentGatewayAdapterFactory:
+    merchant_code: str
+    logger: Logger
+    sasapay_api_client: SasapayApiClient
+    payment_events_publisher: PaymentEventsPublisher
+
+    def create_for_registration(
+        self, registration_event_publisher: RegistrationEventsPublisher
+    ):
+        payment_gateway = SasaPayPaymentGatewayAdapter(
+            merchant_code=self.merchant_code,
+            registration_event_publisher=registration_event_publisher,
+            logger=self.logger,
+            sasapay_api_client=self.sasapay_api_client,
+            payment_events_publisher=self.payment_events_publisher,
+        )
+
+        registration_event_publisher.subscribe(observer=payment_gateway)
+
+        return payment_gateway
+
+    def create_for_send_money(
+        self, send_money_events_publisher: SendMoneyEventsPublisher
+    ):
+        payment_gateway = SasaPayPaymentGatewayAdapter(
+            merchant_code=self.merchant_code,
+            send_money_event_publisher=send_money_events_publisher,
+            logger=self.logger,
+            sasapay_api_client=self.sasapay_api_client,
+            payment_events_publisher=self.payment_events_publisher,
+        )
+
+        send_money_events_publisher.subscribe(observer=payment_gateway)
+
+        return payment_gateway
+
+    def create_for_withdraw(
+        self, withdraw_events_publisher: WithdrawEventsPublisher
+    ) -> SasaPayPaymentGatewayAdapter:
+        pass
+        payment_gateway = SasaPayPaymentGatewayAdapter(
+            merchant_code=self.merchant_code,
+            withdraw_event_publisher=withdraw_events_publisher,
+            logger=self.logger,
+            sasapay_api_client=self.sasapay_api_client,
+            payment_events_publisher=self.payment_events_publisher,
+        )
+
+        withdraw_events_publisher.subscribe(observer=payment_gateway)
+
+        return payment_gateway

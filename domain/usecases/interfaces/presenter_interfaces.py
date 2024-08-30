@@ -5,7 +5,7 @@ from domain.usecases.interfaces.register_account_interfaces import (
 )
 
 
-class IHomeInterfacePresenter(IRegistrationEventObserver, ABC):
+class IHomeInterfacePresenter(ABC):
     """
     Abstract home interface presenter.
 

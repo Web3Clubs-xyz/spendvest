@@ -20,10 +20,11 @@ class SessionTypes(Base):
     __tablename__ = "session_types"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String)
+    name: Mapped[str] = mapped_column(String(256))
 
-    user_session: Mapped["CustomerSessions"] = relationship(
-        "SessionTypes", back_populates="session_type"
+    customer_sessions: Mapped[List["CustomerSessions"]] = relationship(
+        "CustomerSessions",
+        back_populates="session_type",
     )
 
 
@@ -40,17 +41,17 @@ class CustomerSessions(Base):
         customer (`Customers`): The owner of the session.
     """
 
-    __tablename__ = "user_sessions"
+    __tablename__ = "customer_sessions"
 
-    id: Mapped[str] = mapped_column(primary_key=True)
+    id: Mapped[str] = mapped_column(String(256), primary_key=True)
     current_step: Mapped[int] = mapped_column(Integer)
     type_id: Mapped[int] = mapped_column(Integer, ForeignKey("session_types.id"))
     customer_id: Mapped[Optional[str]] = mapped_column(
-        String, ForeignKey("customers.id"), nullable=True
+        String(256), ForeignKey("customers.id"), nullable=True
     )
 
     session_type: Mapped["SessionTypes"] = relationship(
-        "SessionType", back_populates="user_session"
+        "SessionTypes", back_populates="customer_sessions"
     )
     customer: Mapped[Optional["Customers"]] = relationship(
         "Customers", back_populates="customer_sessions"
@@ -74,15 +75,13 @@ class Customers(Base):
 
     __tablename__ = "customers"
 
-    id: Mapped[str] = mapped_column(primary_key=True)
+    id: Mapped[str] = mapped_column(String(256), primary_key=True)
     first_name: Mapped[str] = mapped_column(String(256))
     middle_name: Mapped[str] = mapped_column(String(256))
     last_name: Mapped[str] = mapped_column(String(256))
     phone_number: Mapped[int] = mapped_column(Integer)
-    email: Mapped[str] = mapped_column(String)
-    whatsapp: Mapped[str] = mapped_column(String)
-    identifying_document: Mapped[str] = mapped_column(String)
-    document_number: Mapped[str] = mapped_column(String)
+    email: Mapped[str] = mapped_column(String(256))
+    whatsapp: Mapped[str] = mapped_column(String(256))
 
     wallets: Mapped[List["Wallets"]] = relationship(
         "Wallets", back_populates="customer"
@@ -107,10 +106,10 @@ class Wallets(Base):
 
     __tablename__ = "wallets"
 
-    id: Mapped[str] = mapped_column(primary_key=True)
+    id: Mapped[str] = mapped_column(String(256), primary_key=True)
     savings_percentage: Mapped[int] = mapped_column(Integer)
-    customer_id: Mapped[str] = mapped_column(String, ForeignKey("customers.account_id"))
-    external_id: Mapped[str] = mapped_column(String)
+    customer_id: Mapped[str] = mapped_column(String(256), ForeignKey("customers.id"))
+    external_id: Mapped[str] = mapped_column(String(256))
 
     customer: Mapped["Customers"] = relationship("Customers", back_populates="wallets")
 
@@ -132,7 +131,7 @@ class Transactions(Base):
 
     __tablename__ = "transactions"
 
-    id: Mapped[str] = mapped_column(primary_key=True)
+    id: Mapped[str] = mapped_column(String(256), primary_key=True)
     transaction_amount: Mapped[int] = mapped_column(Integer)
-    wallet_id: Mapped[str] = mapped_column(String, ForeignKey("wallets.id"))
+    wallet_id: Mapped[str] = mapped_column(String(256), ForeignKey("wallets.id"))
     phone_number: Mapped[int] = mapped_column(Integer)

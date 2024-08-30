@@ -18,6 +18,9 @@ python-dotenv = "^1.0.1"
 aioresponses = "^0.7.6"
 uvicorn = "^0.30.6"
 cryptography = "^43.0.0"
+colorlog = "^6.8.2"
+pytest = "^8.3.2"
+debugpy = "^1.8.5"
 
 
 [build-system]

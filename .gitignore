@@ -20,3 +20,6 @@ scratchpad.md
 
 # logs
 logs/*
+
+# Debugging
+.nvim-dap/*

@@ -1,8 +1,4 @@
-from abc import abstractmethod
 from dataclasses import dataclass, field
-
-from domain.entities.services.send_money_service import ISendMoneyService
-from domain.entities.services.wallet_service import IWalletService
 
 
 @dataclass
@@ -93,33 +89,3 @@ class SendMoneyOutput:
     @transaction_status.setter
     def transaction_status(self, transaction_status: bool) -> None:
         self._transaction_status = transaction_status
-
-
-class ISendMoney:
-    """
-    Abstract class that should be overriden by concrete implementations of
-    usecases that facilitate the 'Send Money' functionality.
-    """
-
-    @abstractmethod
-    def send_money(
-        self,
-        input: SendMoneyInput,
-        send_money_service: ISendMoneyService,  # Replace this with a strategy
-        # so we can send money through different payment gateways
-        wallet_service: IWalletService,
-    ) -> SendMoneyOutput:
-        """
-        Abstract method that should be overriden to enable a customer to save
-        money while spending
-
-        Args:
-            input (SendMoneyInput): Input containing the transaction
-                information
-
-        Returns:
-            SendMoneyOutput: Output that contains information about the
-                transaction
-        """
-
-        pass

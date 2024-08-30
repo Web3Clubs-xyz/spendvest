@@ -1,7 +1,8 @@
 import os
 import aiohttp
 from aiohttp import ClientSession
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 from dotenv import dotenv_values
 
 
@@ -85,4 +86,8 @@ async def refresh_sasapay_token() -> None:
             env_file.write(f"{key}={value}\n")
 
 
-scheduler = BackgroundScheduler()
+scheduler = AsyncIOScheduler()
+
+# Add a job to the scheduler
+scheduler.add_job(refresh_fb_token, IntervalTrigger(days=50))
+scheduler.add_job(refresh_sasapay_token, IntervalTrigger(minutes=45))

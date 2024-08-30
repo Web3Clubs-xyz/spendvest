@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio.session import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from domain.entities.sessions import SessionType, UserSession
 
 from domain.entities.users import Customer
-from drivers.sqlalchemy.models import CustomerSessions, SessionTypes
+from drivers.sqlalchemy.models import CustomerSessions, Customers, SessionTypes
 
 
 @dataclass
@@ -14,12 +15,18 @@ class SQLAlchemySessionRepository:
 
     async def get_user_session(self, session_id: str) -> UserSession | None:
         result = await self.session.execute(
-            select(CustomerSessions).filter(CustomerSessions.id == session_id)
+            select(CustomerSessions)
+            .options(selectinload(CustomerSessions.session_type))
+            .options(selectinload(CustomerSessions.customer))
+            .filter(CustomerSessions.id == session_id)
         )
-        db_user_session = result.scalars().first()
+
+        db_user_session = result.scalars().one_or_none()
 
         if db_user_session is None:
             return None
+
+        print(f"{db_user_session}")
 
         db_session_type = db_user_session.session_type
 
@@ -62,12 +69,28 @@ class SQLAlchemySessionRepository:
         result = await self.session.execute(
             select(CustomerSessions).filter(CustomerSessions.id == customer_session.id)
         )
-        db_user_session = result.scalars().first()
+        db_user_session = result.scalars().one_or_none()
 
         if db_user_session is None:
-            raise Exception
+            user_account_results = await self.session.execute(
+                select(Customers).where(Customers.whatsapp == customer_session.id)
+            )
+            db_customer_account = user_account_results.scalars().one_or_none()
+
+            customer_id = None
+
+            if db_customer_account is not None:
+                customer_id = db_customer_account.id
+
+            db_user_session = CustomerSessions(
+                id=customer_session.id,
+                current_step=customer_session.current_step,
+                type_id=customer_session.session_type.id,
+                customer_id=customer_id,
+            )
 
         db_user_session.current_step = customer_session.current_step
+        db_user_session.type_id = customer_session.session_type.id
 
         self.session.add(db_user_session)
         await self.session.commit()

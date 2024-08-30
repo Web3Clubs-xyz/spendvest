@@ -1,20 +1,36 @@
+from configparser import Error
 from uuid import uuid4
 from aiohttp import ClientSession
-from dataclasses import field
+from dataclasses import dataclass, field
 import aiohttp
 from typing_extensions import Dict, override
 from domain.entities.services.registration_event_publisher import (
     RegistrationCompleted,
+    RegistrationEventsPublisher,
     RegistrationInputRequired,
+    RegistrationUserPrompt,
 )
-from domain.usecases.interfaces.presenter_interfaces import (
-    IHomeInterfacePresenter,
-    IRegisterSasapayWalletPresenter,
-    ISasapayWithdrawPresenter,
+from domain.entities.services.send_money_events_publisher import (
+    ISendMoneyObserver,
+    SendMoneyEventsPublisher,
+    SendMoneyTransactionCompleted,
+    SendMoneyTransactionInputRequired,
+    SendMoneyUserPrompt,
+)
+from domain.entities.services.withdraw_event_publisher import (
+    IWithdrawObserver,
+    WithdrawCompleted,
+    WithdrawEventsPublisher,
+    WithdrawFailed,
+    WithdrawInputRequired,
+    WithdrawUserPrompt,
+)
+from domain.usecases.interfaces.register_account_interfaces import (
+    IRegistrationEventObserver,
 )
 
 
-class WhatsappHomeInterfacePresenter(IHomeInterfacePresenter):
+class WhatsappHomeInterfacePresenter:
     """
     Whatsapp presenter that informs users of available actions they can take.
 
@@ -54,14 +70,17 @@ class WhatsappHomeInterfacePresenter(IHomeInterfacePresenter):
             "Authorization": f"Bearer {whatsapp_access_token}",
             "Content-Type": "application/json",
         }
+        self.messages_url = (
+            self.facebook_endpoint_base_url
+            + f"/{self.whatsapp_phone_number_id}/messages"
+        )
 
     async def post_json_request(self, session: ClientSession, url: str, data: Dict):
         async with session.post(
             url, json=data, headers=self.whatsapp_headers
         ) as response:
-            return response
+            return await response.json()
 
-    @override
     async def render_registered_home_view(self, recepient: str):
         message = {
             "messaging_product": "whatsapp",
@@ -113,7 +132,6 @@ class WhatsappHomeInterfacePresenter(IHomeInterfacePresenter):
                 session=session, url=self.messages_url, data=message
             )
 
-    @override
     async def render_unregistered_home_view(self, recepient):
         message = {
             "messaging_product": "whatsapp",
@@ -122,24 +140,29 @@ class WhatsappHomeInterfacePresenter(IHomeInterfacePresenter):
             "type": "interactive",
             "interactive": {
                 "type": "button",
-                "header": {"text": "Sign Up For Spendvest"},
+                "header": {"text": "Sign Up For Spendvest", "type": "text"},
                 "body": {"text": "Get to your saving goals by saving while spending."},
                 "footer": {"text": "Register now to start saving"},
                 "action": {
                     "buttons": [
-                        {"type": "reply", "reply": {"id": "1", "title": "Sign Up"}}
+                        {
+                            "type": "reply",
+                            "reply": {"id": "sign_up", "title": "Sign Up"},
+                        }
                     ]
                 },
             },
         }
 
         async with aiohttp.ClientSession() as session:
-            await self.post_json_request(
+            print("Sending message to whatsapp...\n\n\n")
+            response = await self.post_json_request(
                 session=session, url=self.messages_url, data=message
             )
+            print(f"Whatsapp Response: {response}")
 
 
-class WhatsappRegistrationPresenter(IRegisterSasapayWalletPresenter):
+class WhatsappRegistrationPresenter(IRegistrationEventObserver):
     """
     Whatsapp presenter that walks users through their account registration
     process.
@@ -166,6 +189,7 @@ class WhatsappRegistrationPresenter(IRegisterSasapayWalletPresenter):
             that it has subscribed to.
     """
 
+    registration_event_publisher: RegistrationEventsPublisher = field(init=False)
     facebook_endpoint_base_url: str = field(init=False)
     whatsapp_access_token: str = field(init=False)
     whatsapp_business_account_id: int = field(init=False)
@@ -179,6 +203,7 @@ class WhatsappRegistrationPresenter(IRegisterSasapayWalletPresenter):
         whatsapp_access_token: str,
         whatsapp_phone_number_id: int,
         whatsapp_business_account_id: int,
+        registration_event_publisher: RegistrationEventsPublisher,
     ) -> None:
         self.whatsapp_access_token = whatsapp_access_token
         self.whatsapp_headers = {
@@ -188,6 +213,7 @@ class WhatsappRegistrationPresenter(IRegisterSasapayWalletPresenter):
         self.whatsapp_phone_number_id = whatsapp_phone_number_id
         self.whatsapp_business_account_id = whatsapp_business_account_id
         self.facebook_endpoint_base_url = facebook_endpoint_base_url
+        self.registration_event_publisher = registration_event_publisher
         self.messages_url = (
             self.facebook_endpoint_base_url
             + f"/{self.whatsapp_phone_number_id}/messages"
@@ -197,10 +223,10 @@ class WhatsappRegistrationPresenter(IRegisterSasapayWalletPresenter):
         async with session.post(
             url, json=data, headers=self.whatsapp_headers
         ) as response:
-            return response
+            return await response.json()
 
-    @override
     async def render_form(self, recepient: str) -> None:
+        print("Sending registration form")
         message = {
             "recepient_type": "individual",
             "messaging_product": "whatsapp",
@@ -214,25 +240,25 @@ class WhatsappRegistrationPresenter(IRegisterSasapayWalletPresenter):
                 "action": {
                     "name": "flow",
                     "parameters": {
+                        "mode": "published",
                         "flow_message_version": "3",
                         "flow_token": uuid4().hex,
-                        "flow_id": "1279210149910870",
+                        "flow_id": "1077527514167561",
                         "flow_cta": "Sign Up",
-                        "flow_action": "data_exchange",
-                        "flow_action_payload": {
-                            "screen": "REGISTRATION_SCREEN",
-                        },
+                        "flow_action": "navigate",
+                        "flow_action_payload": {"screen": "REGISTRATION_SCREEN"},
                     },
                 },
             },
         }
 
         async with aiohttp.ClientSession() as session:
-            await self.post_json_request(
+            response = await self.post_json_request(
                 session=session, url=self.messages_url, data=message
             )
 
-    @override
+            print(f"Whatsapp Form Response: {response}")
+
     async def render_otp(self, recepient: str):
         message = {
             "recepient_type": "individual",
@@ -253,7 +279,6 @@ class WhatsappRegistrationPresenter(IRegisterSasapayWalletPresenter):
                 session=session, url=self.messages_url, data=message
             )
 
-    @override
     async def render_failed_otp(self, recepient: str):
         message = {
             "recepient_type": "individual",
@@ -273,7 +298,6 @@ class WhatsappRegistrationPresenter(IRegisterSasapayWalletPresenter):
                 session=session, url=self.messages_url, data=message
             )
 
-    @override
     async def render_successful_registration(self, recepient: str):
         message = {
             "recepient_type": "individual",
@@ -293,47 +317,127 @@ class WhatsappRegistrationPresenter(IRegisterSasapayWalletPresenter):
                 session=session, url=self.messages_url, data=message
             )
 
+    async def render_system_error(self, recepient: str):
+        message = {
+            "recepient_type": "individual",
+            "messaging_product": "whatsapp",
+            "to": recepient,
+            "type": "text",
+            "text": {
+                "body": (
+                    (
+                        "There was a problem processing your"
+                        "registration please try again later."
+                    )
+                )
+            },
+        }
+
+        async with aiohttp.ClientSession() as session:
+            await self.post_json_request(
+                session=session, url=self.messages_url, data=message
+            )
+
     @override
     async def update(self, event: object) -> None:
+        print(f"Updating with {event}")
         if (
-            isinstance(event, RegistrationInputRequired)
-            and event.input_name == "registration_info"
+            isinstance(event, RegistrationUserPrompt)
+            and event.event_name == "registration_info"
         ):
             await self.render_form(recepient=event.prompt_recepient)
+            await self.registration_event_publisher.notify(
+                event=RegistrationInputRequired(
+                    input_name="registration_info",
+                    prompt_recepient=event.prompt_recepient,
+                )
+            )
 
-        if isinstance(event, RegistrationInputRequired) and event.input_name == "otp":
+        if isinstance(event, RegistrationUserPrompt) and event.event_name == "otp":
             await self.render_otp(recepient=event.prompt_recepient)
+            await self.registration_event_publisher.notify(
+                event=RegistrationInputRequired(
+                    input_name="otp",
+                    prompt_recepient=event.prompt_recepient,
+                )
+            )
 
         if (
-            isinstance(event, RegistrationInputRequired)
-            and event.input_name == "otp_failed"
+            isinstance(event, RegistrationUserPrompt)
+            and event.event_name == "otp_failed"
         ):
             await self.render_failed_otp(recepient=event.prompt_recepient)
+            await self.registration_event_publisher.notify(
+                event=RegistrationInputRequired(
+                    input_name="otp",
+                    prompt_recepient=event.prompt_recepient,
+                )
+            )
 
-        if isinstance(event, RegistrationCompleted):
+        if (
+            isinstance(event, RegistrationUserPrompt)
+            and event.event_name == "registration_complete"
+        ):
             await self.render_successful_registration(recepient=event.prompt_recepient)
+            await self.registration_event_publisher.notify(
+                event=RegistrationCompleted()
+            )
+
+        if (
+            isinstance(event, RegistrationUserPrompt)
+            and event.event_name == "invalid_input"
+        ):
+            await self.render_system_error(recepient=event.prompt_recepient)
+            await self.registration_event_publisher.notify(
+                event=RegistrationCompleted()
+            )
 
 
-class WhatsappSendMoneyPresenter:
+@dataclass
+class WhatsappRegistrationPresenterFactory:
+    facebook_endpoint_base_url: str
+    whatsapp_access_token: str
+    whatsapp_business_account_id: int
+    whatsapp_phone_number_id: int
+
+    def create(
+        self, registration_event_publisher: RegistrationEventsPublisher
+    ) -> WhatsappRegistrationPresenter:
+        presenter = WhatsappRegistrationPresenter(
+            facebook_endpoint_base_url=self.facebook_endpoint_base_url,
+            whatsapp_access_token=self.whatsapp_access_token,
+            whatsapp_business_account_id=self.whatsapp_business_account_id,
+            whatsapp_phone_number_id=self.whatsapp_phone_number_id,
+            registration_event_publisher=registration_event_publisher,
+        )
+
+        return presenter
+
+
+@dataclass
+class WhatsappSendMoneyPresenter(ISendMoneyObserver):
     """
     Whatsapp presenter that renders messages taking people through steps to
     send money.
     """
 
-    facebook_endpoint_base_url: str = field(init=False)
-    whatsapp_access_token: str = field(init=False)
-    whatsapp_business_account_id: int = field(init=False)
-    whatsapp_phone_number_id: int = field(init=False)
-    whatsapp_headers: Dict = field(init=False)
-    messages_url: str = field(init=False)
+    send_money_events_publisher: SendMoneyEventsPublisher
+    facebook_endpoint_base_url: str
+    whatsapp_access_token: str
+    whatsapp_business_account_id: int
+    whatsapp_phone_number_id: int
+    whatsapp_headers: Dict
+    messages_url: str
 
     def __init__(
         self,
+        send_money_events_publisher: SendMoneyEventsPublisher,
         facebook_endpoint_base_url: str,
         whatsapp_access_token: str,
         whatsapp_phone_number_id: int,
         whatsapp_business_account_id: int,
     ) -> None:
+        self.send_money_events_publisher = send_money_events_publisher
         self.whatsapp_access_token = whatsapp_access_token
         self.whatsapp_headers = {
             "Authorization": f"Bearer {self.whatsapp_access_token}",
@@ -351,7 +455,7 @@ class WhatsappSendMoneyPresenter:
         async with session.post(
             url, json=data, headers=self.whatsapp_headers
         ) as response:
-            return response
+            return await response.json()
 
     async def render_successful_transaction(
         self, amount: int, recepient: str, recepient_phone_number: int
@@ -361,7 +465,9 @@ class WhatsappSendMoneyPresenter:
             "messaging_product": "whatsapp",
             "to": recepient,
             "type": "text",
-            "text": {"body": f"KES {amount} has been sent to {recepient_phone_number}"},
+            "text": {
+                "body": f"KES {amount} has been sent to 0{recepient_phone_number}"
+            },
         }
 
         async with aiohttp.ClientSession() as session:
@@ -399,11 +505,12 @@ class WhatsappSendMoneyPresenter:
                 "action": {
                     "name": "flow",
                     "parameters": {
+                        "mode": "published",
                         "flow_message_version": "3",
                         "flow_token": uuid4().hex,
-                        "flow_id": "1048396856627165",
+                        "flow_id": "1745643029574878",
                         "flow_cta": "Send Money",
-                        "flow_action": "data_exchange",
+                        "flow_action": "navigate",
                         "flow_action_payload": {
                             "screen": "SEND_MONEY_SCREEN",
                         },
@@ -413,9 +520,166 @@ class WhatsappSendMoneyPresenter:
         }
 
         async with aiohttp.ClientSession() as session:
+            response = await self.post_json_request(
+                session=session, url=self.messages_url, data=message
+            )
+
+            print(f"Received whatsapp response {response}")
+
+    async def notify_successful_payment_request(
+        self,
+        recepient: str,
+        phone_number: str,
+        receiving_phone_number: str,
+    ):
+        message = {
+            "recepient_type": "individual",
+            "messaging_product": "whatsapp",
+            "to": recepient,
+            "type": "text",
+            "text": {
+                "body": (
+                    f"🎉 We successfully received funds from 0{phone_number}!. "
+                    "We will save a percentage and 🚚 send money "
+                    f"to 0{receiving_phone_number}."
+                )
+            },
+        }
+
+        async with aiohttp.ClientSession() as session:
             await self.post_json_request(
                 session=session, url=self.messages_url, data=message
             )
+
+    async def notify_failed_fund_transfer(
+        self,
+        recepient: str,
+    ):
+        message = {
+            "recepient_type": "individual",
+            "messaging_product": "whatsapp",
+            "to": recepient,
+            "type": "text",
+            "text": {"body": "🚫 A problem occurred. We couldn't transfer funds."},
+        }
+
+        async with aiohttp.ClientSession() as session:
+            await self.post_json_request(
+                session=session, url=self.messages_url, data=message
+            )
+
+    async def pin_prompt(self, recepient: str) -> None:
+        print("Prompting user for pin")
+        message = {
+            "recepient_type": "individual",
+            "messaging_product": "whatsapp",
+            "to": recepient,
+            "type": "text",
+            "text": {
+                "body": (
+                    "Please enter your mpesa pin 🔢 *when prompted*"
+                    " to send the funds."
+                )
+            },
+        }
+
+        async with aiohttp.ClientSession() as session:
+            response = await self.post_json_request(
+                session=session, url=self.messages_url, data=message
+            )
+            print(f"Whatsapp Response: {response}")
+
+    async def notify_error(self, recepient: str) -> None:
+        print("Notifying user of error")
+        message = {
+            "recepient_type": "individual",
+            "messaging_product": "whatsapp",
+            "to": recepient,
+            "type": "text",
+            "text": {
+                "body": (
+                    "A problem occurred while trying to send money. "
+                    "Please try again later."
+                )
+            },
+        }
+
+        async with aiohttp.ClientSession() as session:
+            response = await self.post_json_request(
+                session=session, url=self.messages_url, data=message
+            )
+            print(f"Whatsapp Response: {response}")
+
+    @override
+    async def update(self, event: object) -> None:
+        if isinstance(event, SendMoneyUserPrompt):
+            match event.event_name:
+                case "send_money_info":
+                    await self.prompt_user(recepient=event.prompt_recepient)
+                    await self.send_money_events_publisher.notify(
+                        event=SendMoneyTransactionInputRequired(
+                            input_name="send_money_info",
+                            prompt_recepient=event.prompt_recepient,
+                        )
+                    )
+                case "pin_prompt":
+                    print("Received event notification.")
+                    await self.pin_prompt(recepient=event.prompt_recepient)
+                case "successful_funds_request":
+                    if event.data is None:
+                        raise Error("No data was sent about funds request")
+
+                    await self.notify_successful_payment_request(
+                        recepient=event.prompt_recepient,
+                        phone_number=event.data["phone_number"],
+                        receiving_phone_number=event.data["receiving_phone_number"],
+                    )
+                case "successful_funds_transfer":
+                    if event.data is None:
+                        raise Error(
+                            "No data was sent about the successful transaction."
+                        )
+
+                    await self.render_successful_transaction(
+                        amount=event.data["amount"],
+                        recepient=event.prompt_recepient,
+                        recepient_phone_number=event.data["recepient_phone_number"],
+                    )
+                    await self.send_money_events_publisher.notify(
+                        event=SendMoneyTransactionCompleted()
+                    )
+                case "failed_funds_transfer":
+                    await self.notify_failed_fund_transfer(
+                        recepient=event.prompt_recepient
+                    )
+                case "error":
+                    await self.notify_error(recepient=event.prompt_recepient)
+                    await self.send_money_events_publisher.notify(
+                        event=SendMoneyTransactionCompleted()
+                    )
+
+
+@dataclass
+class WhatsappSendMoneyPresenterFactory:
+    facebook_endpoint_base_url: str
+    whatsapp_access_token: str
+    whatsapp_business_account_id: int
+    whatsapp_phone_number_id: int
+
+    def create(
+        self, send_money_events_publisher: SendMoneyEventsPublisher
+    ) -> WhatsappSendMoneyPresenter:
+        presenter = WhatsappSendMoneyPresenter(
+            send_money_events_publisher=send_money_events_publisher,
+            facebook_endpoint_base_url=self.facebook_endpoint_base_url,
+            whatsapp_access_token=self.whatsapp_access_token,
+            whatsapp_phone_number_id=self.whatsapp_phone_number_id,
+            whatsapp_business_account_id=self.whatsapp_business_account_id,
+        )
+
+        send_money_events_publisher.subscribe(presenter)
+
+        return presenter
 
 
 class WhatsappProcessingPresenter:
@@ -471,7 +735,7 @@ class WhatsappProcessingPresenter:
             )
 
 
-class WhatsappWithdrawPresenter(ISasapayWithdrawPresenter):
+class WhatsappWithdrawPresenter(IWithdrawObserver):
     """
     Whatsapp presenter that renders messages taking people through steps to
     withdraw their savings.
@@ -483,6 +747,7 @@ class WhatsappWithdrawPresenter(ISasapayWithdrawPresenter):
     whatsapp_phone_number_id: int = field(init=False)
     whatsapp_headers: Dict = field(init=False)
     messages_url: str = field(init=False)
+    withdraw_event_publisher: WithdrawEventsPublisher
 
     def __init__(
         self,
@@ -490,6 +755,7 @@ class WhatsappWithdrawPresenter(ISasapayWithdrawPresenter):
         whatsapp_access_token: str,
         whatsapp_phone_number_id: int,
         whatsapp_business_account_id: int,
+        withdraw_event_publisher: WithdrawEventsPublisher,
     ) -> None:
         self.whatsapp_access_token = whatsapp_access_token
         self.whatsapp_headers = {
@@ -503,12 +769,34 @@ class WhatsappWithdrawPresenter(ISasapayWithdrawPresenter):
             self.facebook_endpoint_base_url
             + f"/{self.whatsapp_phone_number_id}/messages"
         )
+        self.withdraw_event_publisher = withdraw_event_publisher
 
     async def post_json_request(self, session: ClientSession, url: str, data: Dict):
         async with session.post(
             url, json=data, headers=self.whatsapp_headers
         ) as response:
-            return response
+            response_data = await response.json()
+            print(f"Response from whatsapp: {response_data}")
+            return response_data
+
+    async def render_failed_withdrawal(self, recepient: str) -> None:
+        message = {
+            "recepient_type": "individual",
+            "messaging_product": "whatsapp",
+            "to": recepient,
+            "type": "text",
+            "text": {
+                "body": (
+                    "🚫 We encountered a problem while trying "
+                    "to withdraw funds from your wallet. Please try again later."
+                )
+            },
+        }
+
+        async with aiohttp.ClientSession() as session:
+            await self.post_json_request(
+                session=session, url=self.messages_url, data=message
+            )
 
     async def render_successful_withdrawal(self, recepient: str, amount: int):
         message = {
@@ -525,6 +813,7 @@ class WhatsappWithdrawPresenter(ISasapayWithdrawPresenter):
             )
 
     async def prompt_user(self, recepient: str):
+        print("Prompting user to fill form.")
         message = {
             "recepient_type": "individual",
             "messaging_product": "whatsapp",
@@ -533,18 +822,17 @@ class WhatsappWithdrawPresenter(ISasapayWithdrawPresenter):
             "interactive": {
                 "type": "flow",
                 "header": {"type": "text", "text": "Withdraw Your Savings"},
-                "body": {
-                    "text": "You can withdraw and realise the efforts of you savings 💃."
-                },
+                "body": {"text": "You can withdraw your savings now! 💃."},
                 "footer": {"text": "Withdraw"},
                 "action": {
                     "name": "flow",
                     "parameters": {
+                        "mode": "draft",
                         "flow_message_version": "3",
                         "flow_token": uuid4().hex,
-                        "flow_id": "1707011593449202",
+                        "flow_id": "832219528668407",
                         "flow_cta": "Withdraw",
-                        "flow_action": "data_exchange",
+                        "flow_action": "navigate",
                         "flow_action_payload": {
                             "screen": "WITHDRAW_SCREEN",
                         },
@@ -557,6 +845,59 @@ class WhatsappWithdrawPresenter(ISasapayWithdrawPresenter):
             await self.post_json_request(
                 session=session, url=self.messages_url, data=message
             )
+
+    @override
+    async def update(self, event: object) -> None:
+        if isinstance(event, WithdrawUserPrompt):
+            event_name = event.event_name
+
+            match event_name:
+                case "withdraw_info":
+                    print("Received prompt event")
+                    await self.prompt_user(recepient=event.prompt_recepient)
+                    await self.withdraw_event_publisher.notify(
+                        event=WithdrawInputRequired(
+                            input_name="withdraw_info",
+                            prompt_recepient=event.prompt_recepient,
+                        )
+                    )
+                case "successful_withdraw":
+                    if event.data is None:
+                        raise ValueError(
+                            "Data wasn't provided for successful withdrawal."
+                        )
+                    await self.render_successful_withdrawal(
+                        recepient=event.prompt_recepient, amount=event.data["amount"]
+                    )
+                    await self.withdraw_event_publisher.notify(
+                        event=WithdrawCompleted()
+                    )
+
+        if isinstance(event, WithdrawFailed):
+            await self.render_failed_withdrawal(recepient=event.prompt_recepient)
+
+
+@dataclass
+class WhatsappWithdrawPresenterFactory:
+    facebook_endpoint_base_url: str
+    whatsapp_access_token: str
+    whatsapp_phone_number_id: int
+    whatsapp_business_account_id: int
+
+    def create(
+        self, withdraw_event_publisher: WithdrawEventsPublisher
+    ) -> WhatsappWithdrawPresenter:
+        presenter = WhatsappWithdrawPresenter(
+            facebook_endpoint_base_url=self.facebook_endpoint_base_url,
+            whatsapp_access_token=self.whatsapp_access_token,
+            whatsapp_phone_number_id=self.whatsapp_phone_number_id,
+            whatsapp_business_account_id=self.whatsapp_business_account_id,
+            withdraw_event_publisher=withdraw_event_publisher,
+        )
+
+        withdraw_event_publisher.subscribe(observer=presenter)
+
+        return presenter
 
 
 class WhatsappInvalidInputPresenter:

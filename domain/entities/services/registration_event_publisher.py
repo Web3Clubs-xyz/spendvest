@@ -7,6 +7,12 @@ from domain.usecases.interfaces.register_account_interfaces import (
 
 
 @dataclass
+class RegistrationUserPrompt:
+    event_name: str
+    prompt_recepient: str
+
+
+@dataclass
 class RegistrationInputRequired:
     input_name: str
     prompt_recepient: str
@@ -20,7 +26,12 @@ class RegistrationInputReceived:
 
 @dataclass
 class RegistrationCompleted:
-    prompt_recepient: str
+    pass
+
+
+@dataclass
+class RegistrationError:
+    error: Exception
 
 
 @dataclass
@@ -38,18 +49,25 @@ class RegistrationEventsPublisher:
     observers: List[IRegistrationEventObserver] = field(default_factory=list)
 
     def subscribe(self, observer: IRegistrationEventObserver) -> None:
-        self.observers.append(observer)
+        if observer not in self.observers:
+            self.observers.append(observer)
 
     def unsubscribe(self, observer: IRegistrationEventObserver) -> None:
         self.observers.remove(observer)
 
     async def notify(self, event: object) -> None:
-        for observer in self.observers:
-            await observer.update(event)
+        print(f"Notifying {len(self.observers)} observers.")
+
+        try:
+            for observer in self.observers:
+                await observer.update(event)
+        except Exception as e:
+            await self.notify(event=RegistrationError(error=e))
 
     async def start(self, session_id: str) -> None:
+        print("Starting registration")
         await self.notify(
-            RegistrationInputRequired(
-                input_name="registration_info", prompt_recepient=session_id
+            RegistrationUserPrompt(
+                event_name="registration_info", prompt_recepient=session_id
             )
         )

@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing_extensions import override
+from dataclasses import dataclass
 from domain.entities.interfaces.user_interfaces import CustomerRepository
 from domain.entities.users import Customer
 from interface_adapters.datastore.customer_repository import (
@@ -41,7 +40,7 @@ class ICustomerService(ABC):
 
 @dataclass
 class CustomerService:
-    repository: SQLAlchemyCustomerRepository = field(init=False)
+    repository: SQLAlchemyCustomerRepository
 
     async def save_customer(self, customer: Customer) -> Customer:
         return await self.repository.save_customer(customer)
@@ -65,3 +64,11 @@ class CustomerService:
         return await self.repository.create_customer(
             customer=customer,
         )
+
+
+@dataclass
+class CustomerServiceFactory:
+    repository: SQLAlchemyCustomerRepository
+
+    def create(self):
+        return CustomerService(repository=self.repository)

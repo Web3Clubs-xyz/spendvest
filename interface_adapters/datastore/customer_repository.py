@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -26,18 +26,7 @@ class SQLAlchemyCustomerRepository(CustomerRepository):
         database
     """
 
-    _session: AsyncSession = field(init=False)
-
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
-
-    @property
-    def session(self) -> AsyncSession:
-        return self._session
-
-    @session.setter
-    def session(self, session: AsyncSession) -> None:
-        self._session = session
+    session: AsyncSession
 
     @override
     async def save_customer(self, customer: Customer) -> Customer:
@@ -52,7 +41,7 @@ class SQLAlchemyCustomerRepository(CustomerRepository):
             User: The `User` entity that has been saved to the database
         """
 
-        result = await self._session.execute(
+        result = await self.session.execute(
             select(Customers).filter(Customers.id == customer.id)
         )
         db_customer = result.scalars().first()
@@ -80,10 +69,9 @@ class SQLAlchemyCustomerRepository(CustomerRepository):
             identifier (str): identifier used to get customers from the database
         """
 
-        result = await self._session.execute(
+        result = await self.session.execute(
             select(Customers).filter(Customers.id == identifier)
         )
-
         db_customer = result.scalars().first()
 
         if db_customer is None:
@@ -106,10 +94,9 @@ class SQLAlchemyCustomerRepository(CustomerRepository):
         """
         Retrieves a customer from the database based on their whatsapp account
         """
-        result = await self._session.execute(
+        result = await self.session.execute(
             select(Customers).filter(Customers.whatsapp == whatsapp_id)
         )
-
         customer = result.scalars().first()
 
         if customer is None:
@@ -137,13 +124,16 @@ class SQLAlchemyCustomerRepository(CustomerRepository):
 
         # User account
         db_customer = Customers(
-            id=str(uuid4().hex),
+            id=customer.id,
             first_name=customer.first_name,
             middle_name=customer.middle_name,
             last_name=customer.last_name,
+            phone_number=customer.phone_number,
+            email=customer.email,
+            whatsapp=customer.whatsapp,
         )
 
-        self._session.add(db_customer)
+        self.session.add(db_customer)
         await self.session.commit()
 
         return customer
