@@ -15,8 +15,6 @@ database_url = (
 )
 engine = create_async_engine(database_url)
 
-db_name = "spendvest"
-
 
 async def setup_db():
     print("SETTING UP.")
@@ -25,10 +23,12 @@ async def setup_db():
         async with engine.connect() as conn:
             try:
                 # Check if the database exists
-                result = await conn.execute(text(f"SHOW DATABASES LIKE '{db_name}'"))
+                result = await conn.execute(
+                    text(f"SHOW DATABASES LIKE '{database_name}'")
+                )
                 if not result.fetchone():
                     # Database doesn't exist, create it
-                    await conn.execute(text(f"CREATE DATABASE {db_name}"))
+                    await conn.execute(text(f"CREATE DATABASE {database_name}"))
             except OperationalError as e:
                 print(f"An error occurred: {e}")
 
@@ -39,7 +39,7 @@ async def setup_db():
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    full_database_url = database_url + f"/{db_name}"
+    full_database_url = database_url + f"/{database_name}"
     db_engine = create_async_engine(full_database_url)
 
     AsyncSessionLocal = async_sessionmaker(
