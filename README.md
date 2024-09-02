@@ -140,7 +140,7 @@ These are the environment variables you need to set up for spendvest
 |MYSQL_DATABASE_HOST|The database's hostname or ip address|127.0.0.1|`string`|
 |MYSQL_DATABASE_NAME|The name of the database we are connecting to|spendvest|`string`|
 |SPENDVEST_SITE_URL|The site url where our spendvest api is hosted|`https://spendvest.xyz`|`string`|
-|LOG_DIR|Directory where logs are stored|/home/<username>/logs|`string`|
+|LOG_DIR|Directory where logs are stored|/home/&lt;username&gt;/logs|`string`|
 
 For niche or advanced use cases, you can modify the `/src/composition_root.py`
 file and define where Spendvest will look for your custom environment

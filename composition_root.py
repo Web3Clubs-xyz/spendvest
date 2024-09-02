@@ -99,7 +99,9 @@ class SpendvestContainer(containers.DeclarativeContainer):
     # Event Publishers
     controller_event_publisher = providers.Singleton(ControllerEventPublisher)
     payment_event_publisher = providers.Singleton(PaymentEventsPublisher)
-    registration_event_publisher = providers.Factory(RegistrationEventsPublisher)
+    registration_event_publisher = providers.Factory(
+        RegistrationEventsPublisher, logger=registration_logger
+    )
     send_money_event_publisher = providers.Factory(
         SendMoneyEventsPublisher, logger=send_money_logger
     )

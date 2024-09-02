@@ -32,7 +32,7 @@ class WithdrawFailed:
 
 @dataclass
 class WithdrawError:
-    pass
+    error: Exception
 
 
 @dataclass
@@ -63,9 +63,12 @@ class WithdrawEventsPublisher:
         self.observers.remove(observer)
 
     async def notify(self, event: object):
-        self.logger.info(f"Notifying {len(self.observers)}")
-        for observer in self.observers:
-            await observer.update(event)
+        try:
+            for observer in self.observers:
+                await observer.update(event)
+        except Exception as e:
+            self.logger.error(f"There was an error while sending money {str(e)}")
+            await self.notify(event=WithdrawError(error=e))
 
     async def start(self, session: UserSession) -> None:
         if session.user is None:
