@@ -119,28 +119,28 @@ and copy the `.env` template file to `.env.development`
 These are the environment variables you need to set up for spendvest
 
 |Name|Description|Example|Datatype|
-|===|===|===|===|
-|FACEBOOK_ENDPOINT_BASE_URL||||
-|FACEBOOK_APP_ID||||
-|FACEBOOK_APP_SECRET||||
-|WHATSAPP_ACCESS_TOKEN||||
-|WHATSAPP_WEBHOOK_VERIFICATION_TOKEN||||
-|WHATSAPP_BUSINESS_ACCOUNT_ID||||
-|WHATSAPP_PHONE_NUMBER_ID||||
-|SASAPAY_PERSONAL_ONBOARDING_ENDPOINT||||
-|SASAPAY_PERSONAL_ONBOARDING_CONFIRMATION_ENDPOINT||||
-|SASAPAY_REQUEST_PAYMENT_ENDPOINT||||
-|SASAPAY_TRANSFER_FUNDS_ENDPOINT||||
-|SASAPAY_CLIENT_ID||||
-|SASAPAY_CLIENT_SECRET||||
-|SASAPAY_ACCESS_TOKEN||||
-|SASAPAY_MERCHANT_CODE||||
-|MYSQL_DATABASE_USER||||
-|MYSQL_DATABASE_PASSWORD||||
-|MYSQL_DATABASE_HOST||||
-|MYSQL_DATABASE_NAME||||
-|SPENDVEST_SITE_URL||||
-|LOG_DIR||||
+|---|---|---|---|
+|FACEBOOK_ENDPOINT_BASE_URL|This is the base url for communicating with facebook apis|`https://graph.facebook.com/v17.0/106540352242922/messages`|`string`|
+|FACEBOOK_APP_ID|The ID identifying the facebook application our code is communicating with|ica*********bvube|`string`|
+|FACEBOOK_APP_SECRET|Facebook app's secret|Ipe******oinvep|`string`|
+|WHATSAPP_ACCESS_TOKEN|User access token that us used to authorise communication with facebook APIs|KpI********veoin|`string`|
+|WHATSAPP_WEBHOOK_VERIFICATION_TOKEN|This token is used to complete a handshake that is necessary to prove that the endpoint we provide an application is an endpoint that we own|123456|`alpha-numeric`|
+|WHATSAPP_BUSINESS_ACCOUNT_ID|Business account ID attached to the phone number being used|3876418763413|`numeric`|
+|WHATSAPP_PHONE_NUMBER_ID|ID of the whatsapp phone number that will be communicating with users|739873459|`numeric`|
+|SASAPAY_PERSONAL_ONBOARDING_ENDPOINT|Endpoint that we call so that sasapay can enable us to onboard users with a wallet|`https://sandbox.sasapay.app/api/v2/waas/personal-onboarding/`|`string`|
+|SASAPAY_PERSONAL_ONBOARDING_CONFIRMATION_ENDPOINT|Endpoint we call so that sasapay can confirm a user's wallet was registered|`https://sandbox.sasapay.app/api/v2/waas/personal-onboarding/confirmation/`|`string`|
+|SASAPAY_REQUEST_PAYMENT_ENDPOINT|Endpoint we call so that sasapay can request payments from users|`https://sandbox.sasapay.app/api/v2/waas/payments/request-payment/`|`string`|
+|SASAPAY_TRANSFER_FUNDS_ENDPOINT|Endpoint we call so that we can transfer funds from a user's wallet to other beneficiaries|`https://sandbox.sasapay.app/api/v2/waas/payments/send-money/`|`string`|
+|SASAPAY_CLIENT_ID|Sasapay application ID|IhJg*******jluef|`string`|
+|SASAPAY_CLIENT_SECRET|Sasapay application secret|Ljeg*******kugUoE|`string`|
+|SASAPAY_ACCESS_TOKEN|Access token used to authenticate our API requests on sasapay's platform|SsEgu*******lkjgfe|`string`|
+|SASAPAY_MERCHANT_CODE|Merchant code provided by Viewtech that will be attached to the wallets being created on spendvest|876345|`numeric`|
+|MYSQL_DATABASE_USER|Database user in our MYSQL database|db_user|`string`|
+|MYSQL_DATABASE_PASSWORD|Database user's password used for authentication in the database|db_user_password|`string`|
+|MYSQL_DATABASE_HOST|The database's hostname or ip address|127.0.0.1|`string`|
+|MYSQL_DATABASE_NAME|The name of the database we are connecting to|spendvest|`string`|
+|SPENDVEST_SITE_URL|The site url where our spendvest api is hosted|`https://spendvest.xyz`|`string`|
+|LOG_DIR|Directory where logs are stored|/home/<username>/logs|`string`|
 
 For niche or advanced use cases, you can modify the `/src/composition_root.py`
 file and define where Spendvest will look for your custom environment
@@ -161,18 +161,33 @@ For production, you should use uvicorn
 uvicorn src.main:app --host 0.0.0.0 --port 80 --reload --workers 4
 ```
 
+or you can run the convenient `run_server.py` module after activating the
+virtual environment with the `$ poetry shell` command
+
+```bash
+poetry shell
+python run_server.py
+```
+
 ## Development
 
 If you are actively contributing to spendvest, please ensure you are familiar
-with working with language servers, linters and formatters. This ensures
-there's consistent code formatting among contributors. The following is the
-list of tools used and the settings.
+with working with:
+1. Language servers
+2. Linters
+3. Formatters
+4. Debuggers
+
+This ensures there's consistent code formatting among contributors and a
+similar workflow for the team. The following is the list of tools used and the
+settings.
 
 |Tool|Purpose|Settings|
-|===|===|===|
+|---|---|---|
 |[pyright](https://github.com/microsoft/pyright)|Type Checker|`default`|
 |[black](https://github.com/psf/black)|Code Formatter|`default`|
 |[flake8](https://github.com/PyCQA/flake8)|Linter|`./.flake8`|
+|[debugpy](https://github.com/microsoft/debugpy)|Debugger|Customise debugger settings to fit your environment.|
 
 Ensure you set up either your IDE to work with these tools or use the tools
 directly to format and lint your code.

@@ -51,6 +51,7 @@ class RegisterCustomerAccountUseCase(IRegistrationEventObserver):
         await self.session_service.delete_customer_session(
             customer_session=self.active_session
         )
+        self.active_session = None
 
     async def update(self, event: object) -> None:
         if isinstance(event, RegistrationCompleted) or isinstance(
@@ -64,6 +65,7 @@ class RegisterCustomerAccountUseCase(IRegistrationEventObserver):
                     event_name="error", prompt_recepient=self.active_session.id
                 )
             )
+            await self.delete_session()
 
 
 @dataclass

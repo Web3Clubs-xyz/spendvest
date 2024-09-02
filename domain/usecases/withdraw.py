@@ -6,8 +6,10 @@ from domain.entities.services.wallet_service import WalletService, WalletService
 from domain.entities.services.withdraw_event_publisher import (
     IWithdrawObserver,
     WithdrawCompleted,
+    WithdrawError,
     WithdrawEventsPublisher,
     WithdrawFailed,
+    WithdrawUserPrompt,
 )
 from domain.entities.sessions import UserSession
 from interface_adapters.ui.presenters.whatsapp_presenters import (
@@ -42,14 +44,23 @@ class WithdrawUseCase(IWithdrawObserver):
         status = await self.session_service.delete_customer_session(
             customer_session=self.active_session
         )
+        self.active_session = None
 
         if not status:
             self.logger.critical("Could not delete the session.")
 
-        return
+            return
 
     async def update(self, event: object) -> None:
         if isinstance(event, WithdrawCompleted) or isinstance(event, WithdrawFailed):
+            await self.delete_session()
+
+        if isinstance(event, WithdrawError) and self.active_session is not None:
+            await self.withdraw_event_publisher.notify(
+                event=WithdrawUserPrompt(
+                    event_name="error", prompt_recepient=self.active_session.id
+                )
+            )
             await self.delete_session()
 
 

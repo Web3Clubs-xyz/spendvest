@@ -31,6 +31,11 @@ class WithdrawFailed:
 
 
 @dataclass
+class WithdrawError:
+    pass
+
+
+@dataclass
 class WithdrawCompleted:
     pass
 
