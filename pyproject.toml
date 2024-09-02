@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "spendvest"
+version = "0.1.0"
+description = ""
+authors = ["ong3ri"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+aiohttp = "^3.10.3"
+APScheduler = "^3.10.4"
+dependency-injector = "^4.41.0"
+fastapi = "^0.112.0"
+SQLAlchemy = "^2.0.32"
+alembic = "^1.13.2"
+python-dotenv = "^1.0.1"
+aioresponses = "^0.7.6"
+uvicorn = "^0.30.6"
+cryptography = "^43.0.0"
+colorlog = "^6.8.2"
+pytest = "^8.3.2"
+debugpy = "^1.8.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
