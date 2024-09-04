@@ -48,6 +48,10 @@ async def refresh_fb_token():
     # Write changes back to the .env file
     with open(env_file_path, "w") as env_file:
         for key, value in env_vars.items():
+            if key == "MYSQL_DATABASE_PASSWORD":
+                env_file.write(f'{key}="{value}"')
+                continue
+
             env_file.write(f"{key}={value}\n")
 
 
@@ -83,6 +87,10 @@ async def refresh_sasapay_token() -> None:
     # Write changes back to the .env file
     with open(env_file_path, "w") as env_file:
         for key, value in env_vars.items():
+            if key == "MYSQL_DATABASE_PASSWORD":
+                env_file.write(f'{key}="{value}"')
+                continue
+
             env_file.write(f"{key}={value}\n")
 
 

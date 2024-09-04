@@ -185,8 +185,7 @@ async def verify_callback(request: Request):
     # Check the mode and token sent are correct
     if (
         mode == "subscribe"
-        and token
-        == container.config.provided.config().whatsapp.webhook_verification_token()
+        and token == container.config.whatsapp.webhook_verification_token()
     ):
         # Respond with 200 OK and challenge token from the request
         print("Webhook verified successfully!")

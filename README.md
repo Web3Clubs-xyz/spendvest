@@ -50,16 +50,6 @@ The first thing to do is clone the repo
 git clone https://github.com/Web3Clubs-xyz/spendvest.git
 ```
 
-**SSH**
-```
-git clone gh repo clone Web3Clubs-xyz/spendvest
-```
-
-**Github CLI**
-```bash
-gh repo clone Web3Clubs-xyz/spendvest
-```
-
 ### Logging
 
 Spendvest is set up to send logs as json to files in src/logs. Ensure this
@@ -93,8 +83,8 @@ identify what environment it is running in.
 export ENVIRONMENT=<DEPLOYMENT_ENVIRONMENT>
 ```
 
-The default value is `development`. If you just need to run Spendvest on your
-machine, you can just set `ENVIRONMENT` to `production`.
+The default value is `development`. If you just need to deploy Spendvest on your
+production machine, you can just set `ENVIRONMENT` to `production`.
 
 ```bash
 export ENVIRONMENT="production"
@@ -103,7 +93,7 @@ export ENVIRONMENT="production"
 and copy the `.env` template file to `.env.production`
 
 ```bash
-cp .env .env.local
+cp .env .env.production
 ```
 
 If you are contributing to Spendvest, you should set `ENVIRONMENT` to
@@ -165,6 +155,8 @@ or you can run the convenient `run_server.py` module after activating the
 virtual environment with the `$ poetry shell` command
 
 ```bash
+pyenv install 3.10
+pyenv local 3.10
 poetry shell
 python run_server.py
 ```
