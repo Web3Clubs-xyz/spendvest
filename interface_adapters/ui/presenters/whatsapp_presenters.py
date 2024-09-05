@@ -243,8 +243,10 @@ class WhatsappRegistrationPresenter(IRegistrationEventObserver):
                         "mode": "published",
                         "flow_message_version": "3",
                         "flow_token": uuid4().hex,
-                        "flow_id": "1077527514167561",
-                        "flow_cta": "Sign Up",
+                        # We should move this to .env and check conditionally
+                        # based on $ENVIRONMENT
+                        "flow_id": "860335466252860",
+                        "flow_cta": "Sign Up Form",
                         "flow_action": "navigate",
                         "flow_action_payload": {"screen": "REGISTRATION_SCREEN"},
                     },
@@ -325,10 +327,8 @@ class WhatsappRegistrationPresenter(IRegistrationEventObserver):
             "type": "text",
             "text": {
                 "body": (
-                    (
-                        "There was a problem processing your"
-                        "registration please try again later."
-                    )
+                    "There was a problem processing your"
+                    "registration please try again later."
                 )
             },
         }
@@ -508,8 +508,10 @@ class WhatsappSendMoneyPresenter(ISendMoneyObserver):
                         "mode": "published",
                         "flow_message_version": "3",
                         "flow_token": uuid4().hex,
-                        "flow_id": "1745643029574878",
-                        "flow_cta": "Send Money",
+                        # We should move this to .env and check conditionally
+                        # based on $ENVIRONMENT
+                        "flow_id": "1048396856627165",
+                        "flow_cta": "Send Money Form",
                         "flow_action": "navigate",
                         "flow_action_payload": {
                             "screen": "SEND_MONEY_SCREEN",
@@ -830,8 +832,10 @@ class WhatsappWithdrawPresenter(IWithdrawObserver):
                         "mode": "draft",
                         "flow_message_version": "3",
                         "flow_token": uuid4().hex,
-                        "flow_id": "832219528668407",
-                        "flow_cta": "Withdraw",
+                        # We should move this to .env and check conditionally
+                        # based on $ENVIRONMENT
+                        "flow_id": "1707011593449202",
+                        "flow_cta": "Withdraw Form",
                         "flow_action": "navigate",
                         "flow_action_payload": {
                             "screen": "WITHDRAW_SCREEN",
