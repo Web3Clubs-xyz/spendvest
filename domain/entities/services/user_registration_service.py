@@ -64,6 +64,7 @@ class CustomerRegistrationService(IRegistrationEventObserver):
     logger: Logger
 
     def sanitise_phone_number(self, phone_number: str) -> str | None:
+        phone_number = phone_number.replace(" ", "")
         pattern = r"\+?.*?(\d{9})$"
         match = re.search(pattern, phone_number)
 
@@ -157,12 +158,10 @@ class CustomerRegistrationService(IRegistrationEventObserver):
             isinstance(event, RegistrationInputReceived)
             and event.input_name == "registration_info"
         ):
-            print(
-                (
-                    "CustomerRegistrationService has received",
-                    f" registration_info {event.user_input}",
-                )
-            )
+            print((
+                "CustomerRegistrationService has received",
+                f" registration_info {event.user_input}",
+            ))
             user_input = event.user_input
             registration_info = user_input["registration_info"]
 

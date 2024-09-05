@@ -5,6 +5,8 @@ from logging import Logger
 import math
 from uuid import uuid4
 
+from apscheduler.util import re
+
 from domain.entities.payments import Wallet
 from domain.entities.services.registration_event_publisher import (
     RegistrationEventsPublisher,
@@ -118,6 +120,18 @@ class WalletService(IRegistrationEventObserver, ISendMoneyObserver, IWithdrawObs
             print(f"There was a problem creating a wallet: {str(e)}")
             raise Error("Wallet Creation Error:")
 
+    def sanitise_phone_number(self, phone_number: str) -> str | None:
+        phone_number = phone_number.replace(" ", "")
+        pattern = r"\+?.*?(\d{9})$"
+        match = re.search(pattern, phone_number)
+
+        if match:
+            rest_of_phone_number = match.group(1)
+
+            return rest_of_phone_number
+
+        return None
+
     async def send_money(
         self,
         amount: int,
@@ -223,9 +237,16 @@ class WalletService(IRegistrationEventObserver, ISendMoneyObserver, IWithdrawObs
             isinstance(event, SendMoneyTransactionInputReceived)
             and event.input_name == "send_money_info"
         ):
+            phone_number = self.sanitise_phone_number(
+                phone_number=event.user_input["receiving_phone_number"]
+            )
+
+            if phone_number is None:
+                raise ValueError("Phone number is invalid")
+
             await self.send_money(
                 amount=event.user_input["payment_amount"],
-                recepient_number=event.user_input["receiving_phone_number"],
+                recepient_number=int(phone_number),
                 session=event.user_input["session"],
             )
 
@@ -234,9 +255,16 @@ class WalletService(IRegistrationEventObserver, ISendMoneyObserver, IWithdrawObs
             and event.input_name == "withdraw_info"
         ):
             self.logger.info("Received withdraw input from event bus")
+            phone_number = self.sanitise_phone_number(
+                phone_number=event.user_input["receiving_phone_number"]
+            )
+
+            if phone_number is None:
+                raise ValueError("Phone number is invalid")
+
             await self.withdraw(
                 amount=event.user_input["amount"],
-                receiving_phone_number=event.user_input["receiving_phone_number"],
+                receiving_phone_number=int(phone_number),
                 session_id=event.user_input["session_id"],
             )
 
