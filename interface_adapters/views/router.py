@@ -498,7 +498,7 @@ class WhatsappRouter:
                 self.logger.info(f"Processing send money flow information {data}")
                 user_input = {
                     "payment_amount": int(data["payment_amount"]),
-                    "receiving_phone_number": int(data["receiving_phone_number"]),
+                    "receiving_phone_number": data["receiving_phone_number"],
                     "session": session,
                 }
                 self.controller_event_publisher.notify(
@@ -518,7 +518,7 @@ class WhatsappRouter:
 
                 user_input = {
                     "amount": int(data["amount"]),
-                    "receiving_phone_number": int(data["receiving_phone_number"]),
+                    "receiving_phone_number": data["receiving_phone_number"],
                 }
                 self.controller_event_publisher.notify(
                     event_id=session.id, event_type="withdraw", data=user_input
