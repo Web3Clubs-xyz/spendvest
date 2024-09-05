@@ -26,7 +26,7 @@ async def refresh_fb_token():
     app_secret = os.getenv("FACEBOOK_APP_SECRET")
     access_token = os.getenv("WHATSAPP_ACCESS_TOKEN")
     url = (
-        "https://graph.facebook.com/20.0/oauth/access_token?"
+        "https://graph.facebook.com/20.0/oauth/access-token?"
         "grant_type=fb_exchange_token&"
         f"client_id={app_id}&"
         f"client_secret={app_secret}&"
