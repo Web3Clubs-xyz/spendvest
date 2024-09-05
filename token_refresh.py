@@ -3,7 +3,7 @@ import aiohttp
 from aiohttp import ClientSession
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from dotenv import dotenv_values
+from dotenv import dotenv_values, load_dotenv
 
 
 async def get_fb_token(session: ClientSession, url: str, headers=None):
@@ -29,7 +29,7 @@ async def refresh_fb_token():
         "set_token_expires_in_60_days=true&"
         f"fb_exchange_token={access_token}"
     )
-    headers = {""}
+    headers = {}
 
     async with aiohttp.ClientSession() as session:
         new_token = await get_fb_token(session, url, headers=headers)
@@ -53,6 +53,10 @@ async def refresh_fb_token():
                 continue
 
             env_file.write(f"{key}={value}\n")
+
+    # Reload the .env file to update the environment variables in the current
+    # process
+    load_dotenv(env_file_path)
 
 
 async def get_sasapay_token(session: aiohttp.ClientSession) -> str:
@@ -92,6 +96,10 @@ async def refresh_sasapay_token() -> None:
                 continue
 
             env_file.write(f"{key}={value}\n")
+
+    # Reload the .env file to update the environment variables in the current
+    # process
+    load_dotenv(env_file_path)
 
 
 scheduler = AsyncIOScheduler()

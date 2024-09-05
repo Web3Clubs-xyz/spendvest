@@ -30,6 +30,7 @@ main_router = APIRouter(prefix="/api/v1")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Get token at startup
+    print("Refreshing tokens on startup!")
     await refresh_fb_token()
     await refresh_sasapay_token()
 
