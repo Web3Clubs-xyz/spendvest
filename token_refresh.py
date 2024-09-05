@@ -38,6 +38,7 @@ async def refresh_fb_token():
     async with aiohttp.ClientSession() as session:
         new_token = await get_fb_token(session, url, headers=headers)
 
+    print(f"New FB token: {new_token}")
     environment = os.getenv("ENVIRONMENT", "development")
 
     match environment:
@@ -61,6 +62,7 @@ async def refresh_fb_token():
     # Reload the .env file to update the environment variables in the current
     # process
     load_dotenv(env_file_path)
+    print(f"Facebook token from environment: {os.getenv('WHATSAPP_ACCESS_TOKEN')}")
 
 
 async def get_sasapay_token(session: aiohttp.ClientSession) -> str:
@@ -81,6 +83,7 @@ async def refresh_sasapay_token() -> None:
     async with aiohttp.ClientSession() as session:
         new_token = await get_sasapay_token(session=session)
 
+    print(f"New Sasapay token: {new_token}")
     environment = os.getenv("ENVIRONMENT", "development")
 
     match environment:
@@ -104,6 +107,7 @@ async def refresh_sasapay_token() -> None:
     # Reload the .env file to update the environment variables in the current
     # process
     load_dotenv(env_file_path)
+    print(f"Sasapay token from environment: {os.getenv('SASAPAY_ACCESS_TOKEN')}")
 
 
 scheduler = AsyncIOScheduler()
