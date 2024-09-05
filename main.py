@@ -15,7 +15,7 @@ from interface_adapters.payments.sasapay.payment_events_publisher import (
     PaymentEventsPublisher,
 )
 from interface_adapters.views.router import WhatsappRouter, WhatsappWebhook
-from token_refresh import scheduler
+from token_refresh import refresh_fb_token, refresh_sasapay_token, scheduler
 
 container = SpendvestContainer()
 
@@ -29,6 +29,10 @@ main_router = APIRouter(prefix="/api/v1")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # Get token at startup
+    await refresh_fb_token()
+    await refresh_sasapay_token()
+
     # Start the scheduler
     scheduler.start()
     await container.db_session_factory()
