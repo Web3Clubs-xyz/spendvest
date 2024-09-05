@@ -829,7 +829,7 @@ class WhatsappWithdrawPresenter(IWithdrawObserver):
                 "action": {
                     "name": "flow",
                     "parameters": {
-                        "mode": "draft",
+                        "mode": "published",
                         "flow_message_version": "3",
                         "flow_token": uuid4().hex,
                         # We should move this to .env and check conditionally
