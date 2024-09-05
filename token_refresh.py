@@ -9,7 +9,12 @@ from dotenv import dotenv_values, load_dotenv
 async def get_fb_token(session: ClientSession, url: str, headers=None):
     async with session.get(url, headers=headers) as response:
         res = await response.json()
-        return res["access_token"]
+        print(res)
+
+        if "access_token" in res:
+            return res["access_token"]
+
+        raise ValueError("Access token wasn't returned")
 
 
 async def refresh_fb_token():
