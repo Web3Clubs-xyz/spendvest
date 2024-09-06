@@ -82,6 +82,7 @@ class WhatsappHomeInterfacePresenter:
         })
         print(f"Whatsapp Headers: {self.whatsapp_headers}")
         print(f"Whatsapp URL: {url}")
+        print(f"Sent Data: {data}")
         async with session.post(
             url, json=data, headers=self.whatsapp_headers
         ) as response:
