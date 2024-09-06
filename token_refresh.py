@@ -3,7 +3,7 @@ import aiohttp
 from aiohttp import ClientSession
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from dotenv import dotenv_values, load_dotenv
+from dotenv import dotenv_values, load_dotenv, set_key
 
 
 async def get_fb_token(session: ClientSession, url: str, headers=None):
@@ -48,11 +48,14 @@ async def refresh_fb_token():
             env_file_path = ".env.development"
 
     env_vars = dotenv_values(env_file_path)
-    env_vars["WHATSAPP_ACCESS_TOKEN"] = new_token
+    set_key(env_file_path, "WHATSAPP_ACCESS_TOKEN", new_token)
 
     # Write changes back to the .env file
     with open(env_file_path, "w") as env_file:
         for key, value in env_vars.items():
+            if key != "WHATSAPP_ACCESS_TOKEN" and value is not None:
+                set_key(env_file_path, key, value)
+
             if key == "MYSQL_DATABASE_PASSWORD":
                 env_file.write(f'{key}="{value}"')
                 continue
@@ -61,7 +64,7 @@ async def refresh_fb_token():
 
     # Reload the .env file to update the environment variables in the current
     # process
-    load_dotenv(env_file_path)
+    load_dotenv(env_file_path, override=True)
     print(f"Facebook token from environment: {os.getenv('WHATSAPP_ACCESS_TOKEN')}")
 
 
@@ -93,11 +96,14 @@ async def refresh_sasapay_token() -> None:
             env_file_path = ".env.development"
 
     env_vars = dotenv_values(env_file_path)
-    env_vars["SASAPAY_ACCESS_TOKEN"] = new_token
+    set_key(env_file_path, "SASAPAY_ACCESS_TOKEN", new_token)
 
     # Write changes back to the .env file
     with open(env_file_path, "w") as env_file:
         for key, value in env_vars.items():
+            if key != "SASAPAY_ACCESS_TOKEN" and value is not None:
+                set_key(env_file_path, key, value)
+
             if key == "MYSQL_DATABASE_PASSWORD":
                 env_file.write(f'{key}="{value}"')
                 continue
@@ -106,7 +112,7 @@ async def refresh_sasapay_token() -> None:
 
     # Reload the .env file to update the environment variables in the current
     # process
-    load_dotenv(env_file_path)
+    load_dotenv(env_file_path, override=True)
     print(f"Sasapay token from environment: {os.getenv('SASAPAY_ACCESS_TOKEN')}")
 
 
