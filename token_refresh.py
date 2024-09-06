@@ -60,12 +60,11 @@ async def refresh_fb_token():
     # Write changes back to the .env file
     with open(env_file_path, "w") as env_file:
         for key, value in env_vars.items():
-            if key != "WHATSAPP_ACCESS_TOKEN" and value is not None:
-                env_file.write(f"{key}={value}")
-
             if key == "MYSQL_DATABASE_PASSWORD":
-                env_file.write(f"{key}='{value}'")
+                env_file.write(f"{key}='{value}'\n")
                 continue
+
+            env_file.write(f"{key}={value}\n")
 
     # Reload the .env file to update the environment variables in the current
     # process
@@ -112,12 +111,11 @@ async def refresh_sasapay_token() -> None:
     # Write changes back to the .env file
     with open(env_file_path, "w") as env_file:
         for key, value in env_vars.items():
-            if key != "SASAPAY_ACCESS_TOKEN" and value is not None:
-                env_file.write(f"{key}={value}")
-
             if key == "MYSQL_DATABASE_PASSWORD":
-                env_file.write(f"{key}='{value}'")
+                env_file.write(f"{key}='{value}'\n")
                 continue
+
+            env_file.write(f"{key}={value}\n")
 
     # Reload the .env file to update the environment variables in the current
     # process
