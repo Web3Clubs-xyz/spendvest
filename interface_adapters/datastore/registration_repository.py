@@ -38,4 +38,8 @@ class SQLAlchemyRegistrationRepository:
         return wallet
 
     async def commit(self) -> None:
-        await self.session.commit()
+        try:
+            await self.session.commit()
+        except Exception as e:
+            await self.session.rollback()
+            print(f"An error occured while committing the session {e}")

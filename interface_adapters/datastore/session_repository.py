@@ -93,7 +93,12 @@ class SQLAlchemySessionRepository:
         db_user_session.type_id = customer_session.session_type.id
 
         self.session.add(db_user_session)
-        await self.session.commit()
+
+        try:
+            await self.session.commit()
+        except Exception as e:
+            await self.session.rollback()
+            print(f"An error occured while commiting the transaction {e}")
 
         return customer_session
 
@@ -112,7 +117,12 @@ class SQLAlchemySessionRepository:
         db_session_type = SessionTypes(id=session_type.id, name=session_type.name)
 
         self.session.add(db_session_type)
-        await self.session.commit()
+
+        try:
+            await self.session.commit()
+        except Exception as e:
+            await self.session.rollback()
+            print(f"An error occured while committing the transaction {e}")
 
         return session_type
 
@@ -126,6 +136,11 @@ class SQLAlchemySessionRepository:
             raise ValueError("Customer's session doesn't exist")
 
         await self.session.delete(db_customer_session)
-        await self.session.commit()
+
+        try:
+            await self.session.commit()
+        except Exception as e:
+            await self.session.rollback()
+            print(f"An error occured while committing the transaction. {e}")
 
         return True

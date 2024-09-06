@@ -134,6 +134,11 @@ class SQLAlchemyCustomerRepository(CustomerRepository):
         )
 
         self.session.add(db_customer)
-        await self.session.commit()
+
+        try:
+            await self.session.commit()
+        except Exception as e:
+            await self.session.rollback()
+            print(f"An error occured while committing the transaction: {e}")
 
         return customer

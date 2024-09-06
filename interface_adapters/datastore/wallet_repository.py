@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from sqlalchemy import select
+from sqlalchemy import except_, select
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import selectinload
 from domain.entities.payments import Wallet
@@ -21,7 +21,12 @@ class SQLAlchemyWalletRepository:
         )
 
         self.session.add(db_wallet)
-        await self.session.commit()
+
+        try:
+            await self.session.commit()
+        except Exception as e:
+            await self.session.rollback()
+            print(f"An error occured while commiting the transaction: {e}")
 
         return wallet
 
