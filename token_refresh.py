@@ -52,6 +52,8 @@ async def refresh_fb_token():
         case _:
             env_file_path = os.path.join(os.path.dirname(__file__), ".env.development")
 
+    refresh_logger.info(f"File path is: {env_file_path}")
+
     env_vars = dotenv_values(env_file_path)
     set_key(env_file_path, "WHATSAPP_ACCESS_TOKEN", new_token)
 
@@ -101,6 +103,8 @@ async def refresh_sasapay_token() -> None:
             env_file_path = os.path.join(os.path.dirname(__file__), ".env.production")
         case _:
             env_file_path = os.path.join(os.path.dirname(__file__), ".env.development")
+
+    refresh_logger.info(f"File path is: {env_file_path}")
 
     env_vars = dotenv_values(env_file_path)
     set_key(env_file_path, "SASAPAY_ACCESS_TOKEN", new_token)
