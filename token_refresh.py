@@ -43,7 +43,7 @@ async def refresh_fb_token():
     async with aiohttp.ClientSession() as session:
         new_token = await get_fb_token(session, url, headers=headers)
 
-    print(f"New FB token: {new_token}")
+    refresh_logger.info(f"New FB token: {new_token}")
     environment = os.getenv("ENVIRONMENT", "development")
 
     match environment:
@@ -93,7 +93,7 @@ async def refresh_sasapay_token() -> None:
     async with aiohttp.ClientSession() as session:
         new_token = await get_sasapay_token(session=session)
 
-    print(f"New Sasapay token: {new_token}")
+    refresh_logger.info(f"New Sasapay token: {new_token}")
     environment = os.getenv("ENVIRONMENT", "development")
 
     match environment:
