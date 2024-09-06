@@ -80,6 +80,7 @@ class WhatsappHomeInterfacePresenter:
         self.whatsapp_headers.update({
             "Authorization": os.getenv("WHATSAPP_ACCESS_TOKEN")
         })
+        print(f"Whatsapp Headers: {self.whatsapp_headers}")
         async with session.post(
             url, json=data, headers=self.whatsapp_headers
         ) as response:
