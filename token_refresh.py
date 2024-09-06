@@ -88,6 +88,8 @@ async def get_sasapay_token(session: aiohttp.ClientSession) -> str:
         res = await response.json()
         access_token = res["access_token"]
 
+        refresh_logger.info(f"Data from sasapay: {res}")
+
         return access_token
 
 
