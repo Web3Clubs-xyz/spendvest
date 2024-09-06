@@ -55,7 +55,7 @@ async def refresh_fb_token():
     refresh_logger.info(f"File path is: {env_file_path}")
 
     env_vars = dotenv_values(env_file_path)
-    set_key(env_file_path, "WHATSAPP_ACCESS_TOKEN", new_token)
+    env_vars["WHATSAPP_ACCESS_TOKEN"] = new_token
 
     # Write changes back to the .env file
     with open(env_file_path, "w") as env_file:
@@ -66,8 +66,6 @@ async def refresh_fb_token():
             if key == "MYSQL_DATABASE_PASSWORD":
                 env_file.write(f"{key}='{value}'")
                 continue
-
-            env_file.write(f"{key}={value}\n")
 
     # Reload the .env file to update the environment variables in the current
     # process
@@ -109,7 +107,7 @@ async def refresh_sasapay_token() -> None:
     refresh_logger.info(f"File path is: {env_file_path}")
 
     env_vars = dotenv_values(env_file_path)
-    set_key(env_file_path, "SASAPAY_ACCESS_TOKEN", new_token)
+    env_vars["SASAPAY_ACCESS_TOKEN"] = new_token
 
     # Write changes back to the .env file
     with open(env_file_path, "w") as env_file:
@@ -120,8 +118,6 @@ async def refresh_sasapay_token() -> None:
             if key == "MYSQL_DATABASE_PASSWORD":
                 env_file.write(f"{key}='{value}'")
                 continue
-
-            env_file.write(f"{key}={value}\n")
 
     # Reload the .env file to update the environment variables in the current
     # process
