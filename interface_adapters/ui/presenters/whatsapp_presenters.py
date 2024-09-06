@@ -1,4 +1,5 @@
 from configparser import Error
+import os
 from uuid import uuid4
 from aiohttp import ClientSession
 from dataclasses import dataclass, field
@@ -76,6 +77,9 @@ class WhatsappHomeInterfacePresenter:
         )
 
     async def post_json_request(self, session: ClientSession, url: str, data: Dict):
+        self.whatsapp_headers.update({
+            "Authorization": os.getenv("WHATSAPP_ACCESS_TOKEN")
+        })
         async with session.post(
             url, json=data, headers=self.whatsapp_headers
         ) as response:

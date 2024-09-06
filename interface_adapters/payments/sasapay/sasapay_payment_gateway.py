@@ -2,6 +2,7 @@ from asyncio import Queue
 from configparser import Error
 from dataclasses import dataclass, field
 from logging import Logger
+import os
 from typing import Dict
 from uuid import uuid4
 from aiohttp import ClientSession
@@ -60,9 +61,11 @@ class SasapayApiClient:
     logger: Logger
 
     async def post_json_request(self, session: ClientSession, url: str, data: Dict):
-        self.sasapay_headers.update({"Authorization": f"Bearer {self.access_token}"})
+        self.sasapay_headers.update({
+            "Authorization": f"Bearer {os.getenv('SASAPAY_ACCESS_TOKEN')}"
+        })
         self.logger.info(f"Headers: {self.sasapay_headers}")
-        self.logger.info(f"Access Token: {self.access_token}")
+        self.logger.info(f"Access Token: {os.getenv('SASAPAY_ACCESS_TOKEN')}")
         self.logger.info(f"URL: {url}")
         self.logger.info(f"Payload: {data}")
         async with session.post(
@@ -652,7 +655,6 @@ class SasaPayPaymentGatewayAdapter(
         return True
 
     async def update(self, event: object) -> None:
-
         if isinstance(event, RegistrationInputReceived) and event.input_name == "otp":
             await self.otp_queue.put(event.user_input["otp"])
 
