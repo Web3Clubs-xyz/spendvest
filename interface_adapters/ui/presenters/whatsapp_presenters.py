@@ -81,6 +81,7 @@ class WhatsappHomeInterfacePresenter:
             "Authorization": os.getenv("WHATSAPP_ACCESS_TOKEN")
         })
         print(f"Whatsapp Headers: {self.whatsapp_headers}")
+        print(f"Whatsapp URL: {url}")
         async with session.post(
             url, json=data, headers=self.whatsapp_headers
         ) as response:
