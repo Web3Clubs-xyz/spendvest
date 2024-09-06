@@ -1,9 +1,14 @@
+from logging import Logger, StreamHandler
 import os
 import aiohttp
 from aiohttp import ClientSession
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from dotenv import dotenv_values, load_dotenv, set_key
+
+
+refresh_logger = Logger("refresh_logger")
+refresh_logger.addHandler(StreamHandler())
 
 
 async def get_fb_token(session: ClientSession, url: str, headers=None):
@@ -43,9 +48,9 @@ async def refresh_fb_token():
 
     match environment:
         case "production":
-            env_file_path = ".env.production"
+            env_file_path = os.path.join(os.path.dirname(__file__), ".env.production")
         case _:
-            env_file_path = ".env.development"
+            env_file_path = os.path.join(os.path.dirname(__file__), ".env.development")
 
     env_vars = dotenv_values(env_file_path)
     set_key(env_file_path, "WHATSAPP_ACCESS_TOKEN", new_token)
@@ -65,7 +70,9 @@ async def refresh_fb_token():
     # Reload the .env file to update the environment variables in the current
     # process
     load_dotenv(env_file_path, override=True)
-    print(f"Facebook token from environment: {os.getenv('WHATSAPP_ACCESS_TOKEN')}")
+    refresh_logger.info(
+        f"Facebook token from environment: {os.getenv('WHATSAPP_ACCESS_TOKEN')}"
+    )
 
 
 async def get_sasapay_token(session: aiohttp.ClientSession) -> str:
@@ -91,9 +98,9 @@ async def refresh_sasapay_token() -> None:
 
     match environment:
         case "production":
-            env_file_path = ".env.production"
+            env_file_path = os.path.join(os.path.dirname(__file__), ".env.production")
         case _:
-            env_file_path = ".env.development"
+            env_file_path = os.path.join(os.path.dirname(__file__), ".env.development")
 
     env_vars = dotenv_values(env_file_path)
     set_key(env_file_path, "SASAPAY_ACCESS_TOKEN", new_token)
@@ -112,8 +119,10 @@ async def refresh_sasapay_token() -> None:
 
     # Reload the .env file to update the environment variables in the current
     # process
-    load_dotenv(env_file_path, override=True)
-    print(f"Sasapay token from environment: {os.getenv('SASAPAY_ACCESS_TOKEN')}")
+    load_dotenv(dotenv_path=env_file_path, override=True)
+    refresh_logger.info(
+        f"Sasapay token from environment: {os.getenv('SASAPAY_ACCESS_TOKEN')}"
+    )
 
 
 scheduler = AsyncIOScheduler()
