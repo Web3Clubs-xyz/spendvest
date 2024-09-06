@@ -57,7 +57,7 @@ async def refresh_fb_token():
                 set_key(env_file_path, key, value)
 
             if key == "MYSQL_DATABASE_PASSWORD":
-                env_file.write(f'{key}="{value}"')
+                env_file.write(f"{key}='{value}'")
                 continue
 
             env_file.write(f"{key}={value}\n")
@@ -105,7 +105,7 @@ async def refresh_sasapay_token() -> None:
                 set_key(env_file_path, key, value)
 
             if key == "MYSQL_DATABASE_PASSWORD":
-                env_file.write(f'{key}="{value}"')
+                env_file.write(f"{key}='{value}'")
                 continue
 
             env_file.write(f"{key}={value}\n")
