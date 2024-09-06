@@ -85,6 +85,7 @@ class WhatsappHomeInterfacePresenter:
         async with session.post(
             url, json=data, headers=self.whatsapp_headers
         ) as response:
+            print(f"Whatsapp Response: {response.json()}")
             return await response.json()
 
     async def render_registered_home_view(self, recepient: str):
@@ -165,7 +166,6 @@ class WhatsappHomeInterfacePresenter:
             response = await self.post_json_request(
                 session=session, url=self.messages_url, data=message
             )
-            print(f"Whatsapp Response: {response}")
 
 
 class WhatsappRegistrationPresenter(IRegistrationEventObserver):
