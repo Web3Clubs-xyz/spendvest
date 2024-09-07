@@ -118,7 +118,7 @@ class WalletService(IRegistrationEventObserver, ISendMoneyObserver, IWithdrawObs
 
         except Exception as e:
             print(f"There was a problem creating a wallet: {str(e)}")
-            raise Error("Wallet Creation Error:")
+            raise Exception("Wallet Creation Error:")
 
     def sanitise_phone_number(self, phone_number: str) -> str | None:
         phone_number = phone_number.replace(" ", "")
@@ -162,7 +162,7 @@ class WalletService(IRegistrationEventObserver, ISendMoneyObserver, IWithdrawObs
         self.logger.info(f"Transaction cost: {transaction_cost}")
 
         if self.send_money_events_publisher is None:
-            raise Error("Send money events publisher is not defined")
+            raise Exception("Send money events publisher is not defined")
 
         if transaction_cost is None:
             await self.send_money_events_publisher.notify(
@@ -175,7 +175,7 @@ class WalletService(IRegistrationEventObserver, ISendMoneyObserver, IWithdrawObs
                 "Customer trying to send more money than sasapay allows."
             )
 
-            raise Error("Transaction amount exceeds sasapay limit.")
+            raise Exception("Transaction amount exceeds sasapay limit.")
 
         amount_to_request = amount + markup + transaction_cost
 
@@ -213,7 +213,7 @@ class WalletService(IRegistrationEventObserver, ISendMoneyObserver, IWithdrawObs
         )
 
         if self.withdraw_events_publisher is None:
-            raise Error("Withdraw events publisher is not defined.")
+            raise Exception("Withdraw events publisher is not defined.")
 
         if not status:
             await self.withdraw_events_publisher.notify(

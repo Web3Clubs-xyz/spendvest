@@ -299,7 +299,7 @@ class SasapayApiClient:
 
             if not request_payment_response_parameters["status"]:
                 message = request_payment_response_parameters["message"]
-                raise Error(f"There was a problem requesting payment: {message}")
+                raise Exception(f"There was a problem requesting payment: {message}")
 
             return RequestPaymentResponseParameters(
                 status=request_payment_response_parameters["status"],
@@ -476,7 +476,7 @@ class SasaPayPaymentGatewayAdapter(
         )
 
         if self.send_money_event_publisher is None:
-            raise Error("Registration event publisher is not defined.")
+            raise Exception("Registration event publisher is not defined.")
 
         await self.send_money_event_publisher.notify(
             event=SendMoneyUserPrompt(
@@ -596,7 +596,7 @@ class SasaPayPaymentGatewayAdapter(
             self.logger.info("Prompting user for OTP")
 
             if self.registration_event_publisher is None:
-                raise Error("Registration event publisher is not defined")
+                raise Exception("Registration event publisher is not defined")
 
             await self.registration_event_publisher.notify(
                 event=RegistrationUserPrompt(
@@ -622,7 +622,7 @@ class SasaPayPaymentGatewayAdapter(
         if registration_info.data is not None:
             return registration_info.data["account_number"]
 
-        raise Error("Account number was not provided")
+        raise Exception("Account number was not provided")
 
     async def withdraw(
         self,

@@ -14,14 +14,18 @@ class SQLAlchemySessionRepository:
     session: AsyncSession
 
     async def get_user_session(self, session_id: str) -> UserSession | None:
-        result = await self.session.execute(
-            select(CustomerSessions)
-            .options(selectinload(CustomerSessions.session_type))
-            .options(selectinload(CustomerSessions.customer))
-            .filter(CustomerSessions.id == session_id)
-        )
+        try:
+            result = await self.session.execute(
+                select(CustomerSessions)
+                .options(selectinload(CustomerSessions.session_type))
+                .options(selectinload(CustomerSessions.customer))
+                .filter(CustomerSessions.id == session_id)
+            )
 
-        db_user_session = result.scalars().one_or_none()
+            db_user_session = result.scalars().one_or_none()
+        except Exception as e:
+            await self.session.rollback()
+            raise Exception(f"Problem querying the database: {e}")
 
         if db_user_session is None:
             return None
@@ -66,16 +70,26 @@ class SQLAlchemySessionRepository:
         return user_session
 
     async def save_user_session(self, customer_session: UserSession) -> UserSession:
-        result = await self.session.execute(
-            select(CustomerSessions).filter(CustomerSessions.id == customer_session.id)
-        )
-        db_user_session = result.scalars().one_or_none()
+        try:
+            result = await self.session.execute(
+                select(CustomerSessions).filter(
+                    CustomerSessions.id == customer_session.id
+                )
+            )
+            db_user_session = result.scalars().one_or_none()
+        except Exception as e:
+            await self.session.rollback()
+            raise Exception(f"Error while querying the database: {e}")
 
         if db_user_session is None:
-            user_account_results = await self.session.execute(
-                select(Customers).where(Customers.whatsapp == customer_session.id)
-            )
-            db_customer_account = user_account_results.scalars().one_or_none()
+            try:
+                user_account_results = await self.session.execute(
+                    select(Customers).where(Customers.whatsapp == customer_session.id)
+                )
+                db_customer_account = user_account_results.scalars().one_or_none()
+            except Exception as e:
+                await self.session.rollback()
+                raise Exception(f"Error while querying the database: {e}")
 
             customer_id = None
 
@@ -103,10 +117,14 @@ class SQLAlchemySessionRepository:
         return customer_session
 
     async def get_session_type(self, session_type_id) -> SessionType:
-        result = await self.session.execute(
-            select(SessionTypes).filter(SessionTypes.id == session_type_id)
-        )
-        db_session_type = result.scalars().first()
+        try:
+            result = await self.session.execute(
+                select(SessionTypes).filter(SessionTypes.id == session_type_id)
+            )
+            db_session_type = result.scalars().first()
+        except Exception as e:
+            await self.session.rollback()
+            raise Exception(f"Error while querying the database: {e}")
 
         if db_session_type is None:
             raise ValueError("Session type doesn't exist")
@@ -127,10 +145,16 @@ class SQLAlchemySessionRepository:
         return session_type
 
     async def delete_customer_session(self, customer_session: UserSession) -> bool:
-        result = await self.session.execute(
-            select(CustomerSessions).filter(CustomerSessions.id == customer_session.id)
-        )
-        db_customer_session = result.scalars().first()
+        try:
+            result = await self.session.execute(
+                select(CustomerSessions).filter(
+                    CustomerSessions.id == customer_session.id
+                )
+            )
+            db_customer_session = result.scalars().first()
+        except Exception as e:
+            await self.session.rollback()
+            raise Exception(f"Error while querying the database: {e}")
 
         if db_customer_session is None:
             raise ValueError("Customer's session doesn't exist")

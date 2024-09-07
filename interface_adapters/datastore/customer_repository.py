@@ -41,10 +41,14 @@ class SQLAlchemyCustomerRepository(CustomerRepository):
             User: The `User` entity that has been saved to the database
         """
 
-        result = await self.session.execute(
-            select(Customers).filter(Customers.id == customer.id)
-        )
-        db_customer = result.scalars().first()
+        try:
+            result = await self.session.execute(
+                select(Customers).filter(Customers.id == customer.id)
+            )
+            db_customer = result.scalars().first()
+        except Exception as e:
+            await self.session.rollback()
+            raise Exception(f"Error while querying the database: {e}")
 
         if db_customer is None:
             raise Exception()
@@ -69,10 +73,14 @@ class SQLAlchemyCustomerRepository(CustomerRepository):
             identifier (str): identifier used to get customers from the database
         """
 
-        result = await self.session.execute(
-            select(Customers).filter(Customers.id == identifier)
-        )
-        db_customer = result.scalars().first()
+        try:
+            result = await self.session.execute(
+                select(Customers).filter(Customers.id == identifier)
+            )
+            db_customer = result.scalars().first()
+        except Exception as e:
+            await self.session.rollback()
+            raise Exception(f"Error while querying the database: {e}")
 
         if db_customer is None:
             return None
@@ -94,10 +102,14 @@ class SQLAlchemyCustomerRepository(CustomerRepository):
         """
         Retrieves a customer from the database based on their whatsapp account
         """
-        result = await self.session.execute(
-            select(Customers).filter(Customers.whatsapp == whatsapp_id)
-        )
-        customer = result.scalars().first()
+        try:
+            result = await self.session.execute(
+                select(Customers).filter(Customers.whatsapp == whatsapp_id)
+            )
+            customer = result.scalars().first()
+        except Exception as e:
+            await self.session.rollback()
+            raise Exception(f"")
 
         if customer is None:
             return None

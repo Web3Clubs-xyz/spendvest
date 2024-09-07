@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from configparser import Error
 from dataclasses import dataclass
 from logging import Logger
 import traceback
@@ -81,7 +80,7 @@ class CustomerRegistrationService(IRegistrationEventObserver):
         )
 
         if sanitised_phone_number is None:
-            raise Error("Invalid phone number")
+            raise Exception("Invalid phone number")
 
         customer.phone_number = int(sanitised_phone_number)
 
@@ -122,7 +121,7 @@ class CustomerRegistrationService(IRegistrationEventObserver):
 
         except Exception as e:
             print(f"There was a problem creating a wallet: {str(e)}")
-            raise Error("Wallet Creation Error:")
+            raise Exception("Wallet Creation Error:")
 
     async def register_user(
         self,

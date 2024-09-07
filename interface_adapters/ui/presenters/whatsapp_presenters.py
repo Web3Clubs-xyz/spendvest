@@ -636,7 +636,7 @@ class WhatsappSendMoneyPresenter(ISendMoneyObserver):
                     await self.pin_prompt(recepient=event.prompt_recepient)
                 case "successful_funds_request":
                     if event.data is None:
-                        raise Error("No data was sent about funds request")
+                        raise Exception("No data was sent about funds request")
 
                     await self.notify_successful_payment_request(
                         recepient=event.prompt_recepient,
@@ -645,7 +645,7 @@ class WhatsappSendMoneyPresenter(ISendMoneyObserver):
                     )
                 case "successful_funds_transfer":
                     if event.data is None:
-                        raise Error(
+                        raise Exception(
                             "No data was sent about the successful transaction."
                         )
 
