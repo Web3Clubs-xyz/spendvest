@@ -78,7 +78,7 @@ class WhatsappHomeInterfacePresenter:
 
     async def post_json_request(self, session: ClientSession, url: str, data: Dict):
         self.whatsapp_headers.update({
-            "Authorization": os.getenv("WHATSAPP_ACCESS_TOKEN")
+            "Authorization": f"Bearer {os.getenv('WHATSAPP_ACCESS_TOKEN')}"
         })
         print(f"Whatsapp Headers: {self.whatsapp_headers}")
         print(f"Whatsapp URL: {url}")
